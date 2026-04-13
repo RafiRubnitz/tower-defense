@@ -1,5 +1,6 @@
 from typing import Optional, Callable, List, Dict
 import pygame
+import os
 
 from src.game_state import GameState
 
@@ -11,10 +12,12 @@ class Button:
                  text: str, callback: Callable = None,
                  font_size: int = 36,
                  base_color: tuple = (80, 80, 100),
-                 hover_color: tuple = (120, 120, 150)):
+                 hover_color: tuple = (120, 120, 150),
+                 sound_callback: Callable = None):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
         self.callback = callback
+        self.sound_callback = sound_callback
         self.base_color = base_color
         self.hover_color = hover_color
         self.font = pygame.font.Font(None, font_size)
@@ -31,6 +34,8 @@ class Button:
 
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             if self.hovered and self.callback:
+                if self.sound_callback:
+                    self.sound_callback()
                 self.callback()
                 return True
         return False
@@ -95,10 +100,67 @@ class MenuManager:
         self.screen_width = win.get_width()
         self.screen_height = win.get_height()
 
+        # Load background image and sounds
+        self.background = self._load_background()
+        self.menu_music = self._load_sound('assets/sounds/menu_music.wav')
+        self.button_click_sound = self._load_sound('assets/sounds/button_click.wav')
+        self.music_playing = False
+
         # אתחול מסכים
         self._init_main_menu()
         self._init_map_selection()
         self._init_settings()
+
+        # Start menu music when entering main menu
+        self._play_menu_music()
+
+    def _load_background(self):
+        """Load menu background image."""
+        background_path = 'assets/images/menu_background.png'
+        if os.path.exists(background_path):
+            try:
+                bg = pygame.image.load(background_path)
+                return pygame.transform.scale(bg, (self.screen_width, self.screen_height))
+            except Exception as e:
+                print(f"Could not load background: {e}")
+        return None
+
+    def _load_sound(self, sound_path: str):
+        """Load a sound file, return None if not found."""
+        if os.path.exists(sound_path):
+            try:
+                return pygame.mixer.Sound(sound_path)
+            except Exception as e:
+                print(f"Could not load sound {sound_path}: {e}")
+        return None
+
+    def _play_menu_music(self):
+        """Play background menu music in loop."""
+        if self.menu_music and not self.music_playing:
+            try:
+                self.menu_music.set_volume(0.3)
+                self.menu_music.play(-1)  # -1 means loop indefinitely
+                self.music_playing = True
+            except Exception:
+                pass
+
+    def _stop_menu_music(self):
+        """Stop menu music."""
+        if self.menu_music and self.music_playing:
+            try:
+                self.menu_music.stop()
+                self.music_playing = False
+            except Exception:
+                pass
+
+    def play_button_sound(self):
+        """Play button click sound effect."""
+        if self.button_click_sound:
+            try:
+                self.button_click_sound.set_volume(0.5)
+                self.button_click_sound.play()
+            except Exception:
+                pass
 
     def _init_main_menu(self):
         """אתחול תפריט ראשי"""
@@ -109,19 +171,19 @@ class MenuManager:
 
         self.buttons['btn_play'] = Button(
             start_x, 200, button_width, button_height,
-            "Play", self._on_play_click
+            "Play", self._on_play_click, sound_callback=self.play_button_sound
         )
         self.buttons['btn_maps'] = Button(
             start_x, 270, button_width, button_height,
-            "Select Map", self._on_maps_click
+            "Select Map", self._on_maps_click, sound_callback=self.play_button_sound
         )
         self.buttons['btn_settings'] = Button(
             start_x, 340, button_width, button_height,
-            "Settings", self._on_settings_click
+            "Settings", self._on_settings_click, sound_callback=self.play_button_sound
         )
         self.buttons['btn_quit'] = Button(
             start_x, 410, button_width, button_height,
-            "Quit", self._on_quit_click
+            "Quit", self._on_quit_click, sound_callback=self.play_button_sound
         )
 
         # תוויות
@@ -167,14 +229,14 @@ class MenuManager:
         self.buttons['btn_back_maps'] = Button(
             20, 20, 120, 40,
             "< Back", self._on_back_from_maps,
-            font_size=28
+            font_size=28, sound_callback=self.play_button_sound
         )
 
         # כפתור התחל - bottom center
         self.buttons['btn_start_game'] = Button(
             (self.screen_width - button_width) // 2, 545, button_width, button_height,
             "Start Game", self._on_start_game_click,
-            font_size=32
+            font_size=32, sound_callback=self.play_button_sound
         )
         self.buttons['btn_start_game'].enabled = False  # מבוטל עד לבחירת מפה
 
@@ -201,26 +263,26 @@ class MenuManager:
         self.buttons['btn_back_settings'] = Button(
             20, 20, 120, 40,
             "< Back", self._on_back_from_settings,
-            font_size=28
+            font_size=28, sound_callback=self.play_button_sound
         )
 
         # כפתורי הגדרות
         self.buttons['btn_difficulty'] = Button(
             start_x, 150, button_width, button_height,
             "Difficulty: Normal", self._on_difficulty_click,
-            font_size=32
+            font_size=32, sound_callback=self.play_button_sound
         )
 
         self.buttons['btn_lives'] = Button(
             start_x, 230, button_width, button_height,
             "Lives: 10", self._on_lives_click,
-            font_size=32
+            font_size=32, sound_callback=self.play_button_sound
         )
 
         self.buttons['btn_money'] = Button(
             start_x, 310, button_width, button_height,
             "Starting Money: 450", self._on_money_click,
-            font_size=28
+            font_size=28, sound_callback=self.play_button_sound
         )
 
         # תוויות
@@ -321,10 +383,12 @@ class MenuManager:
         """חזרה מתפריט המפות"""
         self.current_state = GameState.MAIN_MENU
         self._update_high_score()
+        self._play_menu_music()
 
     def _on_back_from_settings(self):
         """חזרה מהגדרות"""
         self.current_state = GameState.MAIN_MENU
+        self._play_menu_music()
 
     def _on_map_selected(self, map_id: int, map_name: str):
         """מפה נבחרה"""
@@ -341,6 +405,8 @@ class MenuManager:
     def _on_start_game_click(self):
         """התחלת משחק"""
         if self.selected_map_id:
+            # Stop menu music before starting game
+            self._stop_menu_music()
             # העבר את הבחירה למשחק
             self.game.start_game_from_menu(
                 map_id=self.selected_map_id,
@@ -381,8 +447,11 @@ class MenuManager:
 
     def _draw_main_menu(self):
         """צייר תפריט ראשי"""
-        # רקע כהה
-        self.win.fill((30, 30, 40))
+        # Draw background image if available, otherwise use solid color
+        if self.background:
+            self.win.blit(self.background, (0, 0))
+        else:
+            self.win.fill((30, 30, 40))
 
         # צייר כפתורים
         for key in ['btn_play', 'btn_maps', 'btn_settings', 'btn_quit']:
@@ -417,7 +486,8 @@ class MenuManager:
                 btn_text,
                 lambda mid=map_info['id'], mname=map_info['name']:
                 self._on_map_selected(mid, mname),
-                font_size=24
+                font_size=24,
+                sound_callback=self.play_button_sound
             )
             self.map_buttons.append(btn)
 
@@ -490,7 +560,10 @@ class MenuManager:
 
     def _draw_map_selection(self):
         """צייר מסך בחירת מפות"""
-        self.win.fill((30, 30, 40))
+        if self.background:
+            self.win.blit(self.background, (0, 0))
+        else:
+            self.win.fill((30, 30, 40))
 
         # כפתורים
         self.buttons['btn_back_maps'].draw(self.win)
@@ -514,7 +587,10 @@ class MenuManager:
 
     def _draw_settings(self):
         """צייר מסך הגדרות"""
-        self.win.fill((30, 30, 40))
+        if self.background:
+            self.win.blit(self.background, (0, 0))
+        else:
+            self.win.fill((30, 30, 40))
 
         # כפתורים
         self.buttons['btn_back_settings'].draw(self.win)

@@ -294,33 +294,39 @@ class Wave:
         pos = Point(spawn_x, spawn_y)
 
         if enemy_type == 'tank':
-            return Tank(
+            enemy = Tank(
                 pos,
                 life_point=Tank.BASE_HP * self.hp_multiplier,
                 speed=Tank.BASE_SPEED * self.speed_multiplier,
                 bounty=int(Tank.BASE_BOUNTY * self.bounty_multiplier),
             )
         elif enemy_type == 'scout':
-            return Scout(
+            enemy = Scout(
                 pos,
                 life_point=Scout.BASE_HP * self.hp_multiplier,
                 speed=Scout.BASE_SPEED * self.speed_multiplier,
                 bounty=int(Scout.BASE_BOUNTY * self.bounty_multiplier),
             )
         elif enemy_type == 'boss':
-            return Boss(
+            enemy = Boss(
                 pos,
                 life_point=Boss.BASE_HP * self.hp_multiplier,
                 speed=Boss.BASE_SPEED * self.speed_multiplier,
                 bounty=int(Boss.BASE_BOUNTY * self.bounty_multiplier),
             )
         else:
-            return Soldier(
+            enemy = Soldier(
                 pos,
                 life_point=Soldier.BASE_HP * self.hp_multiplier,
                 speed=Soldier.BASE_SPEED * self.speed_multiplier,
                 bounty=int(Soldier.BASE_BOUNTY * self.bounty_multiplier),
             )
+
+        # Initialize slow effect attributes
+        enemy.slow_factor = 1.0
+        enemy.slow_timer = 0
+
+        return enemy
 
     def update(self, dt: int, *args, **kwargs):
         self.map.update(*args, **kwargs)
@@ -349,6 +355,13 @@ class Wave:
                     self.bullets.remove(bullet)
 
         for enemy in self.enemies[:]:
+            # Apply slow effect duration
+            if hasattr(enemy, 'slow_timer') and enemy.slow_timer > 0:
+                enemy.slow_timer -= dt
+                if enemy.slow_timer <= 0:
+                    enemy.slow_factor = 1.0
+                    enemy.slow_timer = 0
+
             if enemy.previous_pos >= len(self.map.path):
                 continue
 
@@ -366,8 +379,10 @@ class Wave:
                     continue
 
             if distance > 0:
-                enemy.pos.x += (dx / distance) * enemy.speed
-                enemy.pos.y += (dy / distance) * enemy.speed
+                # Apply slow_factor to movement speed
+                slow_factor = getattr(enemy, 'slow_factor', 1.0)
+                enemy.pos.x += (dx / distance) * enemy.speed * slow_factor
+                enemy.pos.y += (dy / distance) * enemy.speed * slow_factor
 
     def handle_event(self, event: pygame.event.Event):
         self.map.handle_event(event)

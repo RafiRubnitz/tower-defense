@@ -25,6 +25,7 @@ class Game:
 
     def __init__(self, win: pygame.Surface):
         pygame.font.init()
+        pygame.mixer.init()
         self.win = win
         self.clock = pygame.time.Clock()
         self.state = GameState.MAIN_MENU
