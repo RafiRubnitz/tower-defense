@@ -89,6 +89,50 @@ class Database:
                 setting_value TEXT,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            -- טבלת מצבי סיבוב (active/paused games)
+            CREATE TABLE IF NOT EXISTS round_states (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                round_config_id INTEGER,
+                current_wave INTEGER DEFAULT 0,
+                current_money INTEGER,
+                current_lives INTEGER,
+                current_score INTEGER,
+                towers_placed TEXT DEFAULT '[]',
+                enemies_killed_total INTEGER DEFAULT 0,
+                time_elapsed_seconds INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT 1,
+                saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (round_config_id) REFERENCES round_configs(id)
+            );
+
+            -- טבלת התקדמות גלים (wave-by-wave tracking)
+            CREATE TABLE IF NOT EXISTS wave_progress (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                round_state_id INTEGER,
+                wave_number INTEGER,
+                completed BOOLEAN DEFAULT 0,
+                enemies_spawned INTEGER DEFAULT 0,
+                enemies_killed INTEGER DEFAULT 0,
+                time_taken_seconds INTEGER DEFAULT 0,
+                money_earned INTEGER DEFAULT 0,
+                damage_taken INTEGER DEFAULT 0,
+                completed_at TIMESTAMP,
+                FOREIGN KEY (round_state_id) REFERENCES round_states(id)
+            );
+
+            -- טבלת פעולות מגדלים (tower placement/removal history)
+            CREATE TABLE IF NOT EXISTS tower_actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                round_state_id INTEGER,
+                action_type TEXT,
+                tower_type TEXT,
+                grid_x INTEGER,
+                grid_y INTEGER,
+                cost INTEGER,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (round_state_id) REFERENCES round_states(id)
+            );
         ''')
         self.conn.commit()
 
@@ -467,6 +511,154 @@ class Database:
         """קבלת כל ההגדרות"""
         self.cursor.execute('SELECT setting_key, setting_value FROM player_settings')
         return {r['setting_key']: r['setting_value'] for r in self.cursor.fetchall()}
+
+    # ========== Round State Methods ==========
+
+    def save_round_state(self, round_config_id: int, current_wave: int,
+                         current_money: int, current_lives: int, current_score: int,
+                         towers: List[Dict], enemies_killed: int,
+                         time_elapsed: int) -> int:
+        """שמירת מצב סיבוב פעיל, מחזיר את ה-ID של ה-round_state"""
+        towers_json = json.dumps(towers)
+        self.cursor.execute('''
+            INSERT INTO round_states
+            (round_config_id, current_wave, current_money, current_lives,
+             current_score, towers_placed, enemies_killed_total, time_elapsed_seconds)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (round_config_id, current_wave, current_money, current_lives,
+              current_score, towers_json, enemies_killed, time_elapsed))
+        self.conn.commit()
+        return self.cursor.lastrowid
+
+    def update_round_state(self, round_state_id: int, **kwargs):
+        """עדכון חלקי של מצב סיבוב"""
+        allowed_fields = {'current_wave', 'current_money', 'current_lives',
+                          'current_score', 'towers_placed', 'enemies_killed_total',
+                          'time_elapsed_seconds', 'is_active'}
+        updates = []
+        values = []
+        for key, value in kwargs.items():
+            if key in allowed_fields:
+                if key == 'towers_placed' and isinstance(value, list):
+                    value = json.dumps(value)
+                updates.append(f"{key} = ?")
+                values.append(value)
+        if not updates:
+            return
+        values.append(datetime.now().isoformat())
+        values.append(round_state_id)
+        self.cursor.execute(f'''
+            UPDATE round_states
+            SET {', '.join(updates)}, saved_at = ?
+            WHERE id = ?
+        ''', values)
+        self.conn.commit()
+
+    def get_round_state(self, round_state_id: int) -> Optional[Dict]:
+        """קבלת מצב סיבוב לפי ID"""
+        self.cursor.execute('SELECT * FROM round_states WHERE id = ?', (round_state_id,))
+        row = self.cursor.fetchone()
+        if row:
+            result = dict(row)
+            result['towers_placed'] = json.loads(result['towers_placed'])
+            return result
+        return None
+
+    def get_active_round_states(self) -> List[Dict]:
+        """קבלת כל ה-round_states הפעילים (ניתנים להמשך)"""
+        self.cursor.execute('''
+            SELECT rs.id, rs.round_config_id, rs.current_wave, rs.current_score,
+                   rs.current_money, rs.current_lives, rs.time_elapsed_seconds,
+                   rs.saved_at, m.name as map_name
+            FROM round_states rs
+            JOIN round_configs rc ON rs.round_config_id = rc.id
+            JOIN maps m ON rc.map_id = m.id
+            WHERE rs.is_active = 1
+            ORDER BY rs.saved_at DESC
+        ''')
+        return [dict(r) for r in self.cursor.fetchall()]
+
+    def complete_round_state(self, round_state_id: int, victory: bool):
+        """סימום סיבוב כמסתיים (הצלה/הפסד)"""
+        self.cursor.execute('''
+            UPDATE round_states
+            SET is_active = 0, saved_at = ?
+            WHERE id = ?
+        ''', (datetime.now().isoformat(), round_state_id))
+        self.conn.commit()
+
+    def delete_round_state(self, round_state_id: int):
+        """מחיקת round_state (למשחק שהסתיים או נזנח)"""
+        self.cursor.execute('DELETE FROM round_states WHERE id = ?', (round_state_id,))
+        self.cursor.execute('DELETE FROM wave_progress WHERE round_state_id = ?', (round_state_id,))
+        self.cursor.execute('DELETE FROM tower_actions WHERE round_state_id = ?', (round_state_id,))
+        self.conn.commit()
+
+    # ========== Wave Progress Methods ==========
+
+    def start_wave_tracking(self, round_state_id: int, wave_number: int) -> int:
+        """תחילת מעקב אחר גל חדש, מחזיר את ה-ID של wave_progress"""
+        self.cursor.execute('''
+            INSERT INTO wave_progress (round_state_id, wave_number)
+            VALUES (?, ?)
+        ''', (round_state_id, wave_number))
+        self.conn.commit()
+        return self.cursor.lastrowid
+
+    def complete_wave(self, round_state_id: int, wave_number: int,
+                      enemies_killed: int, time_taken: int,
+                      money_earned: int, damage_taken: int):
+        """סימון גל כהושלם עם סטטיסטיקות"""
+        self.cursor.execute('''
+            UPDATE wave_progress
+            SET completed = 1,
+                enemies_killed = ?,
+                time_taken_seconds = ?,
+                money_earned = ?,
+                damage_taken = ?,
+                completed_at = ?
+            WHERE round_state_id = ? AND wave_number = ?
+        ''', (enemies_killed, time_taken, money_earned, damage_taken,
+              datetime.now().isoformat(), round_state_id, wave_number))
+        self.conn.commit()
+
+    def get_wave_progress(self, round_state_id: int) -> List[Dict]:
+        """קבלת התקדמות כל הגלים עבור round_state מסוים"""
+        self.cursor.execute('''
+            SELECT * FROM wave_progress
+            WHERE round_state_id = ?
+            ORDER BY wave_number
+        ''', (round_state_id,))
+        return [dict(r) for r in self.cursor.fetchall()]
+
+    # ========== Tower Action Methods ==========
+
+    def record_tower_placement(self, round_state_id: int, tower_type: str,
+                               grid_x: int, grid_y: int, cost: int):
+        """רישום הצבת מגדל"""
+        self.cursor.execute('''
+            INSERT INTO tower_actions (round_state_id, action_type, tower_type, grid_x, grid_y, cost)
+            VALUES (?, 'placed', ?, ?, ?, ?)
+        ''', (round_state_id, tower_type, grid_x, grid_y, cost))
+        self.conn.commit()
+
+    def record_tower_removal(self, round_state_id: int, tower_type: str,
+                             grid_x: int, grid_y: int):
+        """רישום הסרת מגדל"""
+        self.cursor.execute('''
+            INSERT INTO tower_actions (round_state_id, action_type, tower_type, grid_x, grid_y, cost)
+            VALUES (?, 'removed', ?, ?, ?, 0)
+        ''', (round_state_id, tower_type, grid_x, grid_y))
+        self.conn.commit()
+
+    def get_tower_history(self, round_state_id: int) -> List[Dict]:
+        """קבלת היסטוריית פעולות מגדלים"""
+        self.cursor.execute('''
+            SELECT * FROM tower_actions
+            WHERE round_state_id = ?
+            ORDER BY timestamp
+        ''', (round_state_id,))
+        return [dict(r) for r in self.cursor.fetchall()]
 
     def close(self):
         """סגירת החיבור ל-DB"""

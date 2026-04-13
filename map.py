@@ -6,11 +6,32 @@ from enemy import Enemy, Soldier, Tank, Scout, Boss
 from src.difficulty import DifficultyManager
 from src.direction import Direction
 from src.point import Point
-from tower import Tower, BasicTower
+from tower import Tower, BasicTower, SniperTower, MachineGunTower, SplashTower, TOWER_TYPES
+
+
+def get_wave_difficulty_multiplier(wave_number: int) -> float:
+    """Return difficulty multiplier for given wave (1-indexed).
+
+    Progressive difficulty scaling:
+    - Wave 1: 1.0x (baseline)
+    - Wave 2: 1.25x (+25%)
+    - Wave 3: 1.30x (+30%)
+    - Wave 4: 1.35x (+35%)
+    - Wave 5: 1.40x (+40%)
+    """
+    multipliers = {
+        1: 1.0,
+        2: 1.25,
+        3: 1.30,
+        4: 1.35,
+        5: 1.40,
+    }
+    return multipliers.get(wave_number, 1.0)
 
 
 class Bullet:
-    def __init__(self, start_x: int, start_y: int, target: Enemy, damage: float, color: Tuple[int, int, int] = (0, 0, 0)):
+    def __init__(self, start_x: int, start_y: int, target: Enemy, damage: float,
+                 color: Tuple[int, int, int] = (0, 0, 0), speed: int = 10):
         self.start_x = start_x
         self.start_y = start_y
         self.x = start_x
@@ -18,7 +39,7 @@ class Bullet:
         self.target = target
         self.damage = damage
         self.color = color
-        self.speed = 10
+        self.speed = speed
         self.active = True
 
     def update(self) -> bool:
@@ -213,8 +234,9 @@ class Wave:
     towers: List[Tower]
     bullets: List[Bullet]
     round_ref: "Round"
+    wave_number: int
 
-    def __init__(self, map: Map, towers: List[Tower], round_ref: "Round"):
+    def __init__(self, map: Map, towers: List[Tower], round_ref: "Round", wave_number: int = 1):
         self.map = map
         self.enemies = []
         self.towers = towers
@@ -225,6 +247,7 @@ class Wave:
         self.enemies_spawned = 0
         self.total_enemies = 10
         self.enemies_escaped = 0
+        self.wave_number = wave_number
         # Difficulty multipliers (set by DifficultyManager via Round.__init__)
         self.hp_multiplier: float = 1.0
         self.speed_multiplier: float = 1.0
@@ -384,7 +407,6 @@ class Round:
         self.game_over = False
         self.victory = False
         self.total_waves = total_waves
-        self.tower_cost = 100
         self.ui_panel_width = 180
         self.restart_button_rect = None
         self.menu_button_rect = None
@@ -394,6 +416,10 @@ class Round:
         self.time_elapsed = 0
         self.return_to_menu = return_to_menu  # callable: () -> None
 
+        # Tower type selection (index into TOWER_TYPES list)
+        self.selected_tower_idx = 0  # default: BasicTower
+        self.tower_cost = TOWER_TYPES[self.selected_tower_idx]['cost']
+
         # Dynamic difficulty manager
         self.difficulty_manager = DifficultyManager(difficulty=difficulty, total_waves=total_waves)
         self._prev_wave_lives = starting_lives
@@ -401,8 +427,9 @@ class Round:
 
         # Create waves using dynamic difficulty
         for i in range(self.total_waves):
-            wave_cfg = self.difficulty_manager.get_wave_config(i + 1)
-            wave = Wave(self.map, self.towers, self)
+            wave_number = i + 1
+            wave_cfg = self.difficulty_manager.get_wave_config(wave_number)
+            wave = Wave(self.map, self.towers, self, wave_number=wave_number)
             wave.total_enemies = wave_cfg.total_enemies
             wave.spawn_interval = wave_cfg.spawn_interval
             wave.hp_multiplier = wave_cfg.enemy_hp_multiplier
@@ -461,7 +488,8 @@ class Round:
 
         # Create waves
         for i in range(round_instance.total_waves):
-            wave = Wave(round_instance.map, round_instance.towers, round_instance)
+            wave_number = i + 1
+            wave = Wave(round_instance.map, round_instance.towers, round_instance, wave_number=wave_number)
             wave.total_enemies = 5 + (i * 3)
             wave.spawn_interval = max(30, 60 - (i * 5))
             wave.enemies_spawned = 0 if i > round_instance.current_wave else (5 + (i * 3) if i < round_instance.current_wave else 0)
@@ -896,10 +924,13 @@ class Round:
             if tower.pos.x == grid_x and tower.pos.y == grid_y:
                 return  # Can't place on existing tower
 
-        # Place the tower
-        self.towers.append(BasicTower(Point(grid_y, grid_x)))
+        # Place the selected tower type
+        tower_info = TOWER_TYPES[self.selected_tower_idx]
+        tower_cls = tower_info['class']
+        self.towers.append(tower_cls(Point(grid_y, grid_x)))
         self.money -= self.tower_cost
 
         # Record in database if db is available
         if db is not None and self.round_state_id is not None:
-            self.record_tower_placement(db, 'basic', grid_x // 20, grid_y // 20, self.tower_cost)
+            self.record_tower_placement(db, tower_info['name'].lower(),
+                                        grid_x // 20, grid_y // 20, self.tower_cost)
