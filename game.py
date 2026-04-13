@@ -3,7 +3,7 @@ from typing import Optional
 
 import pygame
 
-from map import Map, Wave, Round
+from game import Map, Wave, Round
 from player import Player
 from src.game_state import GameState
 from src.point import Point
