@@ -1,8 +1,9 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import pygame
 
 from enemy import Enemy, Soldier
+from src.difficulty import DifficultyManager
 from src.direction import Direction
 from src.point import Point
 from tower import Tower, BasicTower
@@ -164,6 +165,26 @@ class Map(object):
         if self.is_field_pressed:
             pygame.draw.rect(win, self.field_pressed.color, self.field_pressed.pos)
 
+    @classmethod
+    def load_from_path_data(cls, path_data: list) -> "Map":
+        """Create a Map with path loaded from DB path_data (list of [col, row] pairs)."""
+        instance = cls.__new__(cls)
+        instance.size = (40, 30)
+        instance.path = []
+        instance.grid = []
+        instance.is_field_pressed = False
+        instance.field_pressed = Filed(-1, -1, 20, 20, (200, 200, 200))
+
+        for col in range(instance.size[0]):
+            instance.grid.append([])
+            for row in range(instance.size[1]):
+                instance.grid[col].append(Filed(col * 20, row * 20, 20, 20, (255, 255, 255)))
+
+        for col, row in path_data:
+            instance.path.append(PathField(col * 20, row * 20, 20, 20))
+
+        return instance
+
     def update(self, *args, **kwargs):
         ...
 
@@ -200,9 +221,15 @@ class Wave:
         self.round_ref = round_ref
         self.bullets = []
         self.spawn_timer = 0
-        self.spawn_interval = 60  # frames between spawns
+        self.spawn_interval = 1000  # milliseconds between spawns
         self.enemies_spawned = 0
         self.total_enemies = 10
+        self.enemies_escaped = 0
+        # Difficulty multipliers (set by DifficultyManager via Round.__init__)
+        self.hp_multiplier: float = 1.0
+        self.speed_multiplier: float = 1.0
+        self.bounty_multiplier: float = 1.0
+        self.enemy_composition: dict = {'soldier': 10}
 
     def draw(self, win: pygame.Surface):
         self.map.draw(win)
@@ -217,18 +244,31 @@ class Wave:
         for bullet in self.bullets:
             bullet.draw(win)
 
+    def _spawn_enemy(self) -> Soldier:
+        """Create an enemy using the wave's difficulty multipliers."""
+        base_hp = 100 * self.hp_multiplier
+        base_speed = 2.0 * self.speed_multiplier
+        bounty = int(15 * self.bounty_multiplier)
+
+        spawn_x = self.map.path[0].pos.x - (20 * (self.enemies_spawned + 2))
+        spawn_y = self.map.path[0].pos.y
+        return Soldier(
+            Point(spawn_x, spawn_y),
+            life_point=base_hp,
+            speed=base_speed,
+            bounty=bounty,
+        )
+
     def update(self, dt: int, *args, **kwargs):
         self.map.update(*args, **kwargs)
 
-        # Spawn enemies over time
+        # Spawn enemies over time (spawn_interval is in milliseconds)
         if self.enemies_spawned < self.total_enemies:
             self.spawn_timer += dt
             if self.spawn_timer >= self.spawn_interval:
                 self.spawn_timer = 0
-                # Spawn enemies to the left of the first path position
-                spawn_x = self.map.path[0].pos.x - (20 * (self.enemies_spawned + 2))
-                spawn_y = self.map.path[0].pos.y
-                self.enemies.append(Soldier(Point(spawn_x, spawn_y)))
+                enemy = self._spawn_enemy()
+                self.enemies.append(enemy)
                 self.enemies_spawned += 1
 
         for tower in self.towers:
@@ -259,6 +299,7 @@ class Wave:
                 if enemy.previous_pos >= len(self.map.path):
                     self.enemies.remove(enemy)
                     self.round_ref.heart -= 1
+                    self.enemies_escaped += 1
                     continue
 
             if distance > 0:
@@ -284,31 +325,183 @@ class Round:
     victory: bool
     total_waves: int
     ui_panel_width: int
+    round_state_id: Optional[int]
+    round_config_id: Optional[int]
+    start_time: float
+    time_elapsed: int
 
-    def __init__(self):
-        self.map = Map()
+    def __init__(self, round_state_id: Optional[int] = None, round_config_id: Optional[int] = None,
+                 map_instance: Optional[Map] = None, starting_lives: int = 10,
+                 starting_money: int = 450, return_to_menu=None,
+                 difficulty: str = 'normal', total_waves: int = 10):
+        self.map = map_instance if map_instance is not None else Map()
         self.towers = []
-        self.heart = 10
-        self.money = 450
+        self.heart = starting_lives
+        self.money = starting_money
         self.score = 0
         self.current_wave = 0
         self.waves = []
         self.game_over = False
         self.victory = False
-        self.total_waves = 5
+        self.total_waves = total_waves
         self.tower_cost = 100
-        self.ui_panel_width = 180  # Width of the UI panel on the right
-        self.restart_button_rect = None  # Will be set when game over/victory is drawn
+        self.ui_panel_width = 180
+        self.restart_button_rect = None
+        self.menu_button_rect = None
+        self.round_state_id = round_state_id
+        self.round_config_id = round_config_id
+        self.start_time = pygame.time.get_ticks() / 1000
+        self.time_elapsed = 0
+        self.return_to_menu = return_to_menu  # callable: () -> None
 
-        # Create waves
+        # Dynamic difficulty manager
+        self.difficulty_manager = DifficultyManager(difficulty=difficulty, total_waves=total_waves)
+        self._prev_wave_lives = starting_lives
+        self._prev_wave_escaped = 0
+
+        # Create waves using dynamic difficulty
         for i in range(self.total_waves):
+            wave_cfg = self.difficulty_manager.get_wave_config(i + 1)
             wave = Wave(self.map, self.towers, self)
-            wave.total_enemies = 5 + (i * 3)  # Increase enemies per wave
-            wave.spawn_interval = max(30, 60 - (i * 5))  # Faster spawns per wave
+            wave.total_enemies = wave_cfg.total_enemies
+            wave.spawn_interval = wave_cfg.spawn_interval
+            wave.hp_multiplier = wave_cfg.enemy_hp_multiplier
+            wave.speed_multiplier = wave_cfg.enemy_speed_multiplier
+            wave.bounty_multiplier = wave_cfg.bounty_multiplier
+            wave.enemy_composition = wave_cfg.enemy_composition
             self.waves.append(wave)
 
-        # Start first wave
         self.start_wave()
+
+    @classmethod
+    def load_from_db(cls, db, round_state_id: int) -> Optional["Round"]:
+        """Load a round from database"""
+        state = db.get_round_state(round_state_id)
+        if not state:
+            return None
+
+        round_config_id = state['round_config_id']
+        config = db.get_round_config(round_config_id)
+        if not config:
+            return None
+
+        # Get map
+        map_data = db.get_map(config['map_id'])
+        if not map_data:
+            return None
+
+        # Create round with saved state
+        round_instance = cls.__new__(cls)
+        round_instance.map = Map()
+        round_instance.map.path = []
+        for px, py in map_data['path']:
+            round_instance.map.path.append(PathField(px * 20, py * 20, 20, 20))
+        round_instance.towers = []
+        round_instance.heart = state['current_lives']
+        round_instance.money = state['current_money']
+        round_instance.score = state['current_score']
+        round_instance.current_wave = state['current_wave']
+        round_instance.waves = []
+        round_instance.game_over = False
+        round_instance.victory = False
+        round_instance.total_waves = config['total_waves']
+        round_instance.tower_cost = config['tower_cost']
+        round_instance.ui_panel_width = 180
+        round_instance.restart_button_rect = None
+        round_instance.round_state_id = round_state_id
+        round_instance.round_config_id = round_config_id
+        round_instance.start_time = pygame.time.get_ticks() / 1000 - state['time_elapsed_seconds']
+        round_instance.time_elapsed = state['time_elapsed_seconds']
+
+        # Restore towers
+        for tower_data in state['towers_placed']:
+            tower = BasicTower(Point(tower_data['y'] * 20, tower_data['x'] * 20))
+            tower.level = tower_data.get('level', 1)
+            round_instance.towers.append(tower)
+
+        # Create waves
+        for i in range(round_instance.total_waves):
+            wave = Wave(round_instance.map, round_instance.towers, round_instance)
+            wave.total_enemies = 5 + (i * 3)
+            wave.spawn_interval = max(30, 60 - (i * 5))
+            wave.enemies_spawned = 0 if i > round_instance.current_wave else (5 + (i * 3) if i < round_instance.current_wave else 0)
+            if i < round_instance.current_wave:
+                wave.enemies = []
+            round_instance.waves.append(wave)
+
+        return round_instance
+
+    def save_to_db(self, db) -> int:
+        """Save current round state to database"""
+        self.time_elapsed = int(pygame.time.get_ticks() / 1000 - self.start_time)
+
+        # Convert towers to serializable format
+        towers_data = []
+        for tower in self.towers:
+            towers_data.append({
+                'x': tower.pos.x // 20,
+                'y': tower.pos.y // 20,
+                'type': 'basic',
+                'level': tower.level
+            })
+
+        # Count enemies killed
+        enemies_killed = sum(wave.enemies_spawned - len(wave.enemies) for wave in self.waves)
+
+        if self.round_state_id is None:
+            # New save
+            self.round_state_id = db.save_round_state(
+                self.round_config_id or 1,
+                self.current_wave,
+                self.money,
+                self.heart,
+                self.score,
+                towers_data,
+                enemies_killed,
+                self.time_elapsed
+            )
+        else:
+            # Update existing save
+            db.update_round_state(
+                self.round_state_id,
+                current_wave=self.current_wave,
+                current_money=self.money,
+                current_lives=self.heart,
+                current_score=self.score,
+                towers_placed=towers_data,
+                enemies_killed_total=enemies_killed,
+                time_elapsed_seconds=self.time_elapsed
+            )
+
+        return self.round_state_id
+
+    def record_tower_placement(self, db, tower_type: str, grid_x: int, grid_y: int, cost: int):
+        """Record tower placement in database"""
+        if self.round_state_id is not None:
+            db.record_tower_placement(self.round_state_id, tower_type, grid_x, grid_y, cost)
+
+    def complete_wave_in_db(self, db, wave_number: int, enemies_killed: int,
+                            time_taken: int, money_earned: int, damage_taken: int):
+        """Record wave completion in database"""
+        if self.round_state_id is not None:
+            db.complete_wave(self.round_state_id, wave_number, enemies_killed,
+                           time_taken, money_earned, damage_taken)
+            db.start_wave_tracking(self.round_state_id, wave_number + 1)
+
+    def finalize_round_in_db(self, db, victory: bool):
+        """Mark round as complete in database and save to game_stats"""
+        if self.round_state_id is not None:
+            db.complete_round_state(self.round_state_id, victory)
+            db.save_game_result(
+                db.get_round_config(self.round_config_id)['map_id'] if self.round_config_id else 1,
+                self.round_config_id or 1,
+                self.score,
+                self.current_wave + 1 if victory else self.current_wave,
+                victory,
+                enemies_killed=sum(wave.enemies_spawned - len(wave.enemies) for wave in self.waves),
+                towers_built=len(self.towers),
+                play_time=self.time_elapsed
+            )
 
     def start_wave(self):
         if self.current_wave < len(self.waves):
@@ -329,13 +522,19 @@ class Round:
 
         # Check if wave is complete
         if self.waves[self.current_wave].is_complete():
+            finished_wave = self.waves[self.current_wave]
+            lives_lost = self._prev_wave_lives - self.heart
+            self.difficulty_manager.record_wave_result(
+                lives_lost=lives_lost,
+                enemies_escaped=finished_wave.enemies_escaped,
+                total_enemies=finished_wave.total_enemies,
+            )
+            self._prev_wave_lives = self.heart
+
             self.current_wave += 1
             if self.current_wave >= self.total_waves:
                 self.victory = True
                 self.current_wave = self.total_waves - 1  # Keep index in bounds
-            else:
-                # Start next wave after delay
-                pass
 
         # Check game over
         if self.heart <= 0:
@@ -543,7 +742,7 @@ class Round:
         win.blit(score_text, score_rect)
 
         # Restart button
-        button_rect = pygame.Rect(win.get_width() // 2 - 100, win.get_height() // 2 + 50, 200, 50)
+        button_rect = pygame.Rect(win.get_width() // 2 - 110, win.get_height() // 2 + 50, 200, 50)
         pygame.draw.rect(win, (50, 50, 50), button_rect)
         pygame.draw.rect(win, (100, 100, 100), button_rect, 3)
         pygame.draw.rect(win, (70, 70, 70), button_rect, 1)
@@ -552,8 +751,18 @@ class Round:
         restart_rect = restart_text.get_rect(center=button_rect.center)
         win.blit(restart_text, restart_rect)
 
-        # Store button rect for collision detection
+        # Main Menu button
+        menu_button_rect = pygame.Rect(win.get_width() // 2 + 120, win.get_height() // 2 + 50, 200, 50)
+        pygame.draw.rect(win, (40, 40, 80), menu_button_rect)
+        pygame.draw.rect(win, (80, 80, 160), menu_button_rect, 3)
+
+        menu_text = button_font.render("Main Menu", True, (200, 200, 255))
+        menu_rect = menu_text.get_rect(center=menu_button_rect.center)
+        win.blit(menu_text, menu_rect)
+
+        # Store button rects for collision detection
         self.restart_button_rect = button_rect
+        self.menu_button_rect = menu_button_rect
 
     def _draw_victory(self, win: pygame.Surface):
         # Semi-transparent overlay
@@ -582,7 +791,7 @@ class Round:
         win.blit(score_text, score_rect)
 
         # Restart button
-        button_rect = pygame.Rect(win.get_width() // 2 - 100, win.get_height() // 2 + 50, 200, 50)
+        button_rect = pygame.Rect(win.get_width() // 2 - 110, win.get_height() // 2 + 50, 200, 50)
         pygame.draw.rect(win, (50, 50, 50), button_rect)
         pygame.draw.rect(win, (100, 100, 100), button_rect, 3)
         pygame.draw.rect(win, (70, 70, 70), button_rect, 1)
@@ -591,18 +800,36 @@ class Round:
         restart_rect = restart_text.get_rect(center=button_rect.center)
         win.blit(restart_text, restart_rect)
 
-        # Store button rect for collision detection
+        # Main Menu button
+        menu_button_rect = pygame.Rect(win.get_width() // 2 + 120, win.get_height() // 2 + 50, 200, 50)
+        pygame.draw.rect(win, (40, 40, 80), menu_button_rect)
+        pygame.draw.rect(win, (80, 80, 160), menu_button_rect, 3)
+
+        menu_text = button_font.render("Main Menu", True, (200, 200, 255))
+        menu_rect = menu_text.get_rect(center=menu_button_rect.center)
+        win.blit(menu_text, menu_rect)
+
+        # Store button rects for collision detection
         self.restart_button_rect = button_rect
+        self.menu_button_rect = menu_button_rect
 
     def handle_event(self, event: pygame.event.Event):
         self.waves[self.current_wave].handle_event(event)
 
-        # Restart button click (game over or victory)
+        # End-screen button clicks (game over or victory)
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            if (self.game_over or self.victory) and hasattr(self, 'restart_button_rect'):
-                if self.restart_button_rect and self.restart_button_rect.collidepoint(pygame.mouse.get_pos()):
-                    # Restart game
-                    self.__init__()
+            if self.game_over or self.victory:
+                mouse_pos = pygame.mouse.get_pos()
+
+                # Restart button: re-initialise this round in place
+                if self.restart_button_rect and self.restart_button_rect.collidepoint(mouse_pos):
+                    self.__init__(return_to_menu=self.return_to_menu)
+                    return
+
+                # Main Menu button: notify the Game to return to menu
+                if (self.menu_button_rect and self.menu_button_rect.collidepoint(mouse_pos)
+                        and self.return_to_menu is not None):
+                    self.return_to_menu()
                     return
 
         # Tower placement
@@ -610,7 +837,7 @@ class Round:
             if not self.game_over and not self.victory:
                 self.try_place_tower()
 
-    def try_place_tower(self):
+    def try_place_tower(self, db=None):
         mouse_pos = pygame.mouse.get_pos()
         grid_x = (mouse_pos[0] // 20) * 20
         grid_y = (mouse_pos[1] // 20) * 20
@@ -632,3 +859,7 @@ class Round:
         # Place the tower
         self.towers.append(BasicTower(Point(grid_y, grid_x)))
         self.money -= self.tower_cost
+
+        # Record in database if db is available
+        if db is not None and self.round_state_id is not None:
+            self.record_tower_placement(db, 'basic', grid_x // 20, grid_y // 20, self.tower_cost)
