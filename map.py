@@ -2,7 +2,7 @@ from typing import List, Tuple, Optional
 
 import pygame
 
-from enemy import Enemy, Soldier
+from enemy import Enemy, Soldier, Tank, Scout, Boss
 from src.difficulty import DifficultyManager
 from src.direction import Direction
 from src.point import Point
@@ -230,6 +230,7 @@ class Wave:
         self.speed_multiplier: float = 1.0
         self.bounty_multiplier: float = 1.0
         self.enemy_composition: dict = {'soldier': 10}
+        self._spawn_queue: list = []
 
     def draw(self, win: pygame.Surface):
         self.map.draw(win)
@@ -244,20 +245,59 @@ class Wave:
         for bullet in self.bullets:
             bullet.draw(win)
 
-    def _spawn_enemy(self) -> Soldier:
-        """Create an enemy using the wave's difficulty multipliers."""
-        base_hp = 100 * self.hp_multiplier
-        base_speed = 2.0 * self.speed_multiplier
-        bounty = int(15 * self.bounty_multiplier)
+    def _build_spawn_queue(self):
+        """Build ordered list of enemy types based on composition."""
+        queue = []
+        order = ['boss', 'tank', 'scout', 'soldier']
+        for enemy_type in order:
+            count = self.enemy_composition.get(enemy_type, 0)
+            queue.extend([enemy_type] * count)
+        # Fill remainder with soldiers if composition doesn't cover total
+        while len(queue) < self.total_enemies:
+            queue.append('soldier')
+        return queue[:self.total_enemies]
 
-        spawn_x = self.map.path[0].pos.x - (20 * (self.enemies_spawned + 2))
+    def _spawn_enemy(self) -> Enemy:
+        """Create the next enemy using wave's difficulty multipliers and composition."""
+        # Build queue on first spawn
+        if not hasattr(self, '_spawn_queue') or self._spawn_queue is None:
+            self._spawn_queue = self._build_spawn_queue()
+
+        idx = self.enemies_spawned
+        enemy_type = self._spawn_queue[idx] if idx < len(self._spawn_queue) else 'soldier'
+
+        spawn_x = self.map.path[0].pos.x - (20 * (idx + 2))
         spawn_y = self.map.path[0].pos.y
-        return Soldier(
-            Point(spawn_x, spawn_y),
-            life_point=base_hp,
-            speed=base_speed,
-            bounty=bounty,
-        )
+        pos = Point(spawn_x, spawn_y)
+
+        if enemy_type == 'tank':
+            return Tank(
+                pos,
+                life_point=Tank.BASE_HP * self.hp_multiplier,
+                speed=Tank.BASE_SPEED * self.speed_multiplier,
+                bounty=int(Tank.BASE_BOUNTY * self.bounty_multiplier),
+            )
+        elif enemy_type == 'scout':
+            return Scout(
+                pos,
+                life_point=Scout.BASE_HP * self.hp_multiplier,
+                speed=Scout.BASE_SPEED * self.speed_multiplier,
+                bounty=int(Scout.BASE_BOUNTY * self.bounty_multiplier),
+            )
+        elif enemy_type == 'boss':
+            return Boss(
+                pos,
+                life_point=Boss.BASE_HP * self.hp_multiplier,
+                speed=Boss.BASE_SPEED * self.speed_multiplier,
+                bounty=int(Boss.BASE_BOUNTY * self.bounty_multiplier),
+            )
+        else:
+            return Soldier(
+                pos,
+                life_point=Soldier.BASE_HP * self.hp_multiplier,
+                speed=Soldier.BASE_SPEED * self.speed_multiplier,
+                bounty=int(Soldier.BASE_BOUNTY * self.bounty_multiplier),
+            )
 
     def update(self, dt: int, *args, **kwargs):
         self.map.update(*args, **kwargs)
