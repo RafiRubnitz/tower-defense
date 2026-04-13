@@ -43,9 +43,9 @@ class Enemy(object):
 class Soldier(Enemy):
     """Basic infantry unit — balanced stats."""
 
-    BASE_HP = 100.0
-    BASE_SPEED = 2.0
-    BASE_BOUNTY = 15
+    BASE_HP = 150.0  # Increased from 100
+    BASE_SPEED = 2.5  # Increased from 2.0
+    BASE_BOUNTY = 14  # Reduced by 10% from 15
 
     def __init__(self,
                  pos: Point,
@@ -119,9 +119,9 @@ class Soldier(Enemy):
 class Tank(Enemy):
     """Heavy armored unit — high HP, slow speed, high bounty."""
 
-    BASE_HP = 300.0
-    BASE_SPEED = 1.0
-    BASE_BOUNTY = 30
+    BASE_HP = 450.0  # Increased 50% from 300
+    BASE_SPEED = 1.25  # Increased 25% from 1.0
+    BASE_BOUNTY = 27  # Reduced by 10% from 30
 
     def __init__(self,
                  pos: Point,
@@ -186,9 +186,9 @@ class Tank(Enemy):
 class Scout(Enemy):
     """Fast lightweight unit — low HP, high speed, moderate bounty."""
 
-    BASE_HP = 50.0
-    BASE_SPEED = 4.0
-    BASE_BOUNTY = 20
+    BASE_HP = 75.0  # Increased 50% from 50
+    BASE_SPEED = 5.0  # Increased 25% from 4.0
+    BASE_BOUNTY = 18  # Reduced by 10% from 20
 
     def __init__(self,
                  pos: Point,
@@ -254,9 +254,9 @@ class Boss(Enemy):
     Visual: large dark red unit with crown indicator.
     """
 
-    BASE_HP = 1000.0
-    BASE_SPEED = 0.8
-    BASE_BOUNTY = 100
+    BASE_HP = 1500.0  # Increased 50% from 1000
+    BASE_SPEED = 1.0  # Increased 25% from 0.8
+    BASE_BOUNTY = 90  # Reduced by 10% from 100
 
     def __init__(self,
                  pos: Point,

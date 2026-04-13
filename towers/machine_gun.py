@@ -13,7 +13,7 @@ class MachineGunTower(Tower):
     """Short range, low damage, very fast fire: range 3, damage 15, cooldown 100 ms, cost $150."""
 
     tower_type = "MachineGun"
-    cost = 150
+    cost = 180
     shape_style = "rectangle"
 
     def __init__(self, pos: Point):

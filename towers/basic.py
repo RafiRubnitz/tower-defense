@@ -13,7 +13,7 @@ class BasicTower(Tower):
     """Balanced all-rounder: range 3.5, damage 50, cooldown 600 ms, cost $100."""
 
     tower_type = "Basic"
-    cost = 100
+    cost = 120
     shape_style = "square"
 
     def __init__(self, pos: Point):

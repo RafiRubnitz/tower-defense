@@ -14,7 +14,7 @@ class LaserTower(Tower):
     """Long range, fires continuous beam through multiple enemies in a line: range 6.0, damage 30/tick, cooldown 200 ms, cost $300."""
 
     tower_type = "Laser"
-    cost = 300
+    cost = 360
     shape_style = "cross"
 
     def __init__(self, pos: Point):

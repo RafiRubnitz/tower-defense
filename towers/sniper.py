@@ -13,7 +13,7 @@ class SniperTower(Tower):
     """Long range, high damage, slow cooldown: range 8, damage 200, cooldown 2000 ms, cost $200."""
 
     tower_type = "Sniper"
-    cost = 200
+    cost = 240
     shape_style = "diamond"
 
     def __init__(self, pos: Point):

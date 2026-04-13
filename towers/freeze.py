@@ -13,7 +13,7 @@ class FreezeTower(Tower):
     """Slows enemies by 60% for 1.5 seconds: range 3.0, no damage, cooldown 2000 ms, cost $175."""
 
     tower_type = "Freeze"
-    cost = 175
+    cost = 210
     shape_style = "triangle"
     SLOW_FACTOR = 0.4  # enemies move at 40% speed
     SLOW_DURATION = 1500  # milliseconds

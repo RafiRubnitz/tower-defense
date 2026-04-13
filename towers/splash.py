@@ -13,7 +13,7 @@ class SplashTower(Tower):
     """AoE damage: range 4, damage 80 in splash radius 40 px, cooldown 1000 ms, cost $250."""
 
     tower_type = "Splash"
-    cost = 250
+    cost = 300
     shape_style = "circle"
     SPLASH_RADIUS = 40  # pixels
 

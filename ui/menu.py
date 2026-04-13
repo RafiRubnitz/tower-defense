@@ -296,7 +296,7 @@ class MenuManager:
         self.settings = {
             'difficulty': 'normal',  # easy, normal, hard
             'lives': 10,
-            'starting_money': 450
+            'starting_money': 350  # Reduced from 450 for increased difficulty
         }
 
         # טעינת הגדרות שמורות
@@ -351,7 +351,7 @@ class MenuManager:
 
     def _on_money_click(self):
         """שינוי כסף התחלתי"""
-        options = [200, 350, 450, 600, 800]
+        options = [200, 300, 350, 500, 700]  # Updated range for increased difficulty
         current_idx = options.index(self.settings['starting_money']) if self.settings['starting_money'] in options else 2
         self.settings['starting_money'] = options[(current_idx + 1) % len(options)]
         self._update_settings_ui()
