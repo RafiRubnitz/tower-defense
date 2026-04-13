@@ -1,7 +1,8 @@
 """Tower Selector UI - allows players to select which tower to build."""
 
 import pygame
-from typing import Optional, Callable
+import math
+from typing import Dict
 from towers import TOWER_TYPES
 
 
@@ -28,7 +29,7 @@ class TowerSelector:
 
         self.selected_index = 0  # Currently selected tower
         self.tower_buttons = []  # List of rects for each tower button
-        self.scroll_offset = 0  # For scrolling if too many towers
+        self.hovered_index = -1  # For hover effects
 
         self._build_tower_buttons()
 
@@ -39,7 +40,7 @@ class TowerSelector:
         # Tower selector starts below the title and stats section
         # Assume 380px is used for title/stats, leaving space for towers
         towers_start_y = self.panel_y + 380
-        tower_button_height = 60
+        tower_button_height = 65
         tower_button_width = self.panel_width - 30
 
         for i, tower_info in enumerate(TOWER_TYPES):
@@ -62,90 +63,164 @@ class TowerSelector:
     def draw(self, win: pygame.Surface):
         """Draw the tower selector UI."""
         pygame.font.init()
-        small_font = pygame.font.Font(None, 20)
+        small_font = pygame.font.Font(None, 18)
         medium_font = pygame.font.Font(None, 24)
+        bold_font = pygame.font.Font(None, 28)
 
-        # Draw tower selection header
-        header_y = self.panel_y + 380
-        header_text = medium_font.render("SELECT TOWER", True, (255, 215, 0))
-        header_rect = header_text.get_rect(centerx=self.panel_x + self.panel_width // 2, top=header_y)
+        # Draw tower selection header with background box
+        header_y = self.panel_y + 375
+        header_height = 40
+
+        # Header background
+        pygame.draw.rect(win, (40, 40, 60),
+                        (self.panel_x, header_y, self.panel_width, header_height))
+        pygame.draw.rect(win, (100, 100, 150),
+                        (self.panel_x, header_y, self.panel_width, header_height), 2)
+
+        # Header text
+        header_text = bold_font.render("SELECT TOWER", True, (255, 215, 0))
+        header_rect = header_text.get_rect(centerx=self.panel_x + self.panel_width // 2,
+                                          centery=header_y + header_height // 2)
         win.blit(header_text, header_rect)
-
-        # Draw divider line
-        divider_y = header_y + 35
-        pygame.draw.line(win, (80, 80, 100),
-                        (self.panel_x + 10, divider_y),
-                        (self.panel_x + self.panel_width - 10, divider_y), 1)
 
         # Draw each tower button
         for button_info in self.tower_buttons:
             self._draw_tower_button(win, button_info, small_font, medium_font)
 
-    def _draw_tower_button(self, win: pygame.Surface, button_info: dict,
+    def _draw_tower_button(self, win: pygame.Surface, button_info: Dict,
                           small_font: pygame.font.Font, medium_font: pygame.font.Font):
-        """Draw a single tower selection button."""
+        """Draw a single tower selection button with shape-based icon."""
         rect = button_info['rect']
         tower_info = button_info['tower_info']
         index = button_info['index']
 
         is_selected = (index == self.selected_index)
+        is_hovered = (index == self.hovered_index)
 
-        # Button background - highlight if selected
+        # Button background - highlight if selected or hovered
         if is_selected:
-            button_color = (100, 100, 150)  # Lighter blue for selected
+            button_color = (80, 100, 150)  # Bright blue for selected
             border_color = (200, 200, 255)  # Bright blue border
             border_width = 3
+        elif is_hovered:
+            button_color = (70, 80, 120)  # Light blue for hovered
+            border_color = (150, 150, 200)  # Light border
+            border_width = 2
         else:
-            button_color = (50, 50, 70)  # Dark blue for unselected
-            border_color = (100, 100, 150)  # Muted border
+            button_color = (45, 45, 65)  # Dark blue for unselected
+            border_color = (80, 80, 110)  # Muted border
             border_width = 1
 
-        pygame.draw.rect(win, button_color, rect)
-        pygame.draw.rect(win, border_color, rect, border_width)
+        pygame.draw.rect(win, button_color, rect, border_radius=4)
+        pygame.draw.rect(win, border_color, rect, border_width, border_radius=4)
 
-        # Tower icon (small colored circle representing the tower)
-        icon_x = rect.x + 15
-        icon_y = rect.y + rect.height // 2
+        # Get tower class and properties
         tower_cls = tower_info['class']
-        # Get the color from a temporary instance
         temp_tower = tower_cls.__new__(tower_cls)
         tower_color = getattr(temp_tower, 'color', (70, 130, 180))
-        pygame.draw.circle(win, tower_color, (icon_x, icon_y), 8)
-        pygame.draw.circle(win, (0, 0, 0), (icon_x, icon_y), 8, 1)
+        shape_style = getattr(temp_tower, 'shape_style', 'square')
+
+        # Draw tower icon with shape
+        icon_x = rect.x + 20
+        icon_y = rect.y + rect.height // 2
+        self._draw_tower_icon(win, icon_x, icon_y, tower_color, shape_style)
 
         # Tower name
         name_text = medium_font.render(tower_info['name'], True, (255, 255, 255))
-        win.blit(name_text, (icon_x + 20, rect.y + 8))
+        win.blit(name_text, (icon_x + 30, rect.y + 8))
 
-        # Tower cost
-        cost_color = (255, 215, 0)  # Gold
-        cost_text = small_font.render(f"${tower_info['cost']}", True, cost_color)
-        win.blit(cost_text, (icon_x + 20, rect.y + 30))
+        # Tower cost - gold color
+        cost_color = (255, 215, 0) if is_selected else (200, 180, 100)
+        cost_text = small_font.render(f"Cost: ${tower_info['cost']}", True, cost_color)
+        win.blit(cost_text, (icon_x + 30, rect.y + 32))
 
-        # Tower stats (range and damage if available)
+        # Tower stats (range and damage)
         tower_cls = tower_info['class']
         try:
-            # Create temporary instance to get stats
             from src.point import Point
             temp = tower_cls(Point(0, 0))
             range_val = getattr(temp, 'range', 0)
             power_val = getattr(temp, 'power', 0)
 
-            stats_text = f"Range: {range_val} | DMG: {power_val}"
-            stats_rendered = small_font.render(stats_text, True, (180, 180, 200))
-            win.blit(stats_rendered, (rect.right - 160, rect.y + 30))
+            stats_text = f"R:{range_val}  DMG:{power_val}"
+            stats_color = (180, 200, 255) if is_selected else (140, 160, 200)
+            stats_rendered = small_font.render(stats_text, True, stats_color)
+            win.blit(stats_rendered, (rect.right - 130, rect.y + 32))
         except:
             pass
 
+    def _draw_tower_icon(self, win: pygame.Surface, x: int, y: int,
+                        color: tuple, shape_style: str):
+        """Draw tower icon based on its shape style."""
+        radius = 10
+
+        if shape_style == "square":
+            # Square - BasicTower
+            pygame.draw.rect(win, color, (x - radius, y - radius, radius * 2, radius * 2))
+            pygame.draw.rect(win, (255, 255, 255), (x - radius, y - radius, radius * 2, radius * 2), 1)
+
+        elif shape_style == "diamond":
+            # Diamond - SniperTower
+            points = [
+                (x, y - radius),      # top
+                (x + radius, y),      # right
+                (x, y + radius),      # bottom
+                (x - radius, y)       # left
+            ]
+            pygame.draw.polygon(win, color, points)
+            pygame.draw.polygon(win, (255, 255, 255), points, 1)
+
+        elif shape_style == "circle":
+            # Circle - SplashTower
+            pygame.draw.circle(win, color, (x, y), radius)
+            pygame.draw.circle(win, (255, 255, 255), (x, y), radius, 1)
+
+        elif shape_style == "triangle":
+            # Triangle pointing up - FreezeTower
+            points = [
+                (x, y - radius),           # top
+                (x + radius, y + radius),  # bottom-right
+                (x - radius, y + radius)   # bottom-left
+            ]
+            pygame.draw.polygon(win, color, points)
+            pygame.draw.polygon(win, (255, 255, 255), points, 1)
+
+        elif shape_style == "rectangle":
+            # Wide rectangle - MachineGunTower
+            pygame.draw.rect(win, color, (x - radius - 3, y - radius // 2, radius * 2 + 6, radius))
+            pygame.draw.rect(win, (255, 255, 255), (x - radius - 3, y - radius // 2, radius * 2 + 6, radius), 1)
+
+        elif shape_style == "cross":
+            # Cross/Plus - LaserTower
+            line_width = 2
+            # Horizontal line
+            pygame.draw.line(win, color, (x - radius, y), (x + radius, y), line_width)
+            # Vertical line
+            pygame.draw.line(win, color, (x, y - radius), (x, y + radius), line_width)
+            # Corner marks
+            offset = radius - 2
+            pygame.draw.circle(win, color, (x + offset, y + offset), 2)
+            pygame.draw.circle(win, color, (x + offset, y - offset), 2)
+            pygame.draw.circle(win, color, (x - offset, y + offset), 2)
+            pygame.draw.circle(win, color, (x - offset, y - offset), 2)
+
     def handle_event(self, event: pygame.event.Event) -> bool:
-        """Handle mouse clicks on tower buttons.
+        """Handle mouse events on tower buttons.
 
         Returns:
             True if a tower was selected, False otherwise
         """
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            mouse_pos = pygame.mouse.get_pos()
+        if event.type == pygame.MOUSEMOTION:
+            # Check for hover
+            mouse_pos = event.pos
+            self.hovered_index = -1
+            for button_info in self.tower_buttons:
+                if button_info['rect'].collidepoint(mouse_pos):
+                    self.hovered_index = button_info['index']
+                    break
 
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            mouse_pos = event.pos
             for button_info in self.tower_buttons:
                 if button_info['rect'].collidepoint(mouse_pos):
                     self.selected_index = button_info['index']

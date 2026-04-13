@@ -28,6 +28,7 @@ class Tower:
     cool_down: int
     tower_type: str = "Basic"
     cost: int = 100
+    shape_style: str = "square"  # square, diamond, circle, triangle, cross
 
     def draw(self, win: pygame.Surface):
         ...

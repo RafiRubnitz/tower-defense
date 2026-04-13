@@ -14,6 +14,7 @@ class SniperTower(Tower):
 
     tower_type = "Sniper"
     cost = 200
+    shape_style = "diamond"
 
     def __init__(self, pos: Point):
         self.size = (20, 20)

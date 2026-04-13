@@ -14,6 +14,7 @@ class MachineGunTower(Tower):
 
     tower_type = "MachineGun"
     cost = 150
+    shape_style = "rectangle"
 
     def __init__(self, pos: Point):
         self.size = (20, 20)

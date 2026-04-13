@@ -14,6 +14,7 @@ class SplashTower(Tower):
 
     tower_type = "Splash"
     cost = 250
+    shape_style = "circle"
     SPLASH_RADIUS = 40  # pixels
 
     def __init__(self, pos: Point):

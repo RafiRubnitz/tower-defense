@@ -15,6 +15,7 @@ class LaserTower(Tower):
 
     tower_type = "Laser"
     cost = 300
+    shape_style = "cross"
 
     def __init__(self, pos: Point):
         self.size = (20, 20)

@@ -14,6 +14,7 @@ class BasicTower(Tower):
 
     tower_type = "Basic"
     cost = 100
+    shape_style = "square"
 
     def __init__(self, pos: Point):
         self.size = (20, 20)
