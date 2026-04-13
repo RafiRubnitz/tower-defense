@@ -26,6 +26,55 @@ def get_wave_difficulty_multiplier(wave_number: int) -> float:
     return multipliers.get(wave_number, 1.0)
 
 
+def calculate_wave_enemy_count(wave_number: int, base_count: int = 6) -> int:
+    """Calculate enemy count for given wave.
+
+    Formula: base_count × (1 + wave_number × 0.3)
+
+    Example progression:
+    - Wave 1: 6 enemies
+    - Wave 2: 8 enemies
+    - Wave 3: 10 enemies
+    - Wave 4: 13 enemies
+    - Wave 5: 17 enemies
+    """
+    return int(base_count * (1 + wave_number * 0.3))
+
+
+def calculate_wave_enemy_hp(wave_number: int, base_hp: int = 100) -> int:
+    """Calculate HP per enemy for given wave.
+
+    Formula: base_hp × (1 + wave_number × 0.15)
+
+    Example progression:
+    - Wave 1: 100 HP
+    - Wave 2: 115 HP
+    - Wave 3: 132 HP
+    - Wave 4: 152 HP
+    - Wave 5: 175 HP
+    """
+    return int(base_hp * (1 + wave_number * 0.15))
+
+
+def calculate_wave_money(wave_number: int, base_money: int, bounty_earned: int) -> int:
+    """Calculate total money available for tower placement in given wave.
+
+    Formula: (base_money + bounty_earned) × (1 + wave_number × 0.15)
+
+    Creates positive feedback loop:
+    - Kill enemies → Earn bounties → Fund new towers → Kill more enemies
+
+    Example progression (starting with $450):
+    - Wave 1: $450 (baseline)
+    - Wave 2: $575 (~+28%)
+    - Wave 3: $700 (additional tower funding)
+    - Wave 4: $875 (strategic additions possible)
+    - Wave 5: $1050 (final tower push)
+    """
+    wave_multiplier = 1.0 + (wave_number * 0.15)
+    return int((base_money + bounty_earned) * wave_multiplier)
+
+
 class Round:
     map: Map
     waves: List[Wave]
