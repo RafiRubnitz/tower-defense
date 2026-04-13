@@ -7,6 +7,7 @@ from src.difficulty import DifficultyManager
 from src.direction import Direction
 from src.point import Point
 from tower import Tower, BasicTower, SniperTower, MachineGunTower, SplashTower, TOWER_TYPES
+from ui.tower_selector import TowerSelector
 
 
 def get_wave_difficulty_multiplier(wave_number: int) -> float:
@@ -435,6 +436,13 @@ class Round:
         self.selected_tower_idx = 0  # default: BasicTower
         self.tower_cost = TOWER_TYPES[self.selected_tower_idx]['cost']
 
+        # Tower selector UI
+        panel_x = self.map.size[0] * 20
+        panel_y = 0
+        panel_width = self.ui_panel_width
+        panel_height = 600  # Standard window height
+        self.tower_selector = TowerSelector(panel_x, panel_y, panel_width, panel_height)
+
         # Dynamic difficulty manager
         self.difficulty_manager = DifficultyManager(difficulty=difficulty, total_waves=total_waves)
         self._prev_wave_lives = starting_lives
@@ -715,30 +723,8 @@ class Round:
         sep_y = score_y + stat_spacing
         pygame.draw.line(win, (80, 80, 100), (panel_x + 10, sep_y), (panel_x + panel_width - 10, sep_y), 2)
 
-        # Tower info
-        tower_y = sep_y + 40
-        tower_info_text = small_font.render("Tower Cost:", True, (180, 180, 180))
-        win.blit(tower_info_text, (panel_x + 15, tower_y))
-
-        tower_cost_text = font.render(f"${self.tower_cost}", True, (255, 200, 100))
-        win.blit(tower_cost_text, (panel_x + 15, tower_y + 25))
-
-        # Instructions
-        instr_y = tower_y + 70
-        instr_text = small_font.render("Click to place", True, (120, 120, 140))
-        win.blit(instr_text, (panel_x + 15, instr_y))
-
-        instr_text2 = small_font.render("towers on the", True, (120, 120, 140))
-        win.blit(instr_text2, (panel_x + 15, instr_y + 20))
-
-        instr_text3 = small_font.render("grass areas.", True, (120, 120, 140))
-        win.blit(instr_text3, (panel_x + 15, instr_y + 40))
-
-        instr_text4 = small_font.render("Press SPACE", True, (120, 120, 140))
-        win.blit(instr_text4, (panel_x + 15, instr_y + 70))
-
-        instr_text5 = small_font.render("to pause", True, (120, 120, 140))
-        win.blit(instr_text5, (panel_x + 15, instr_y + 90))
+        # Draw tower selector UI
+        self.tower_selector.draw(win)
 
     def _draw_towers(self, win: pygame.Surface):
         for tower in self.towers:
@@ -914,6 +900,14 @@ class Round:
                         and self.return_to_menu is not None):
                     self.return_to_menu()
                     return
+
+        # Tower selector click
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:  # Left click
+            if self.tower_selector.handle_event(event):
+                # Tower was selected, update our state
+                self.selected_tower_idx = self.tower_selector.get_selected_tower_index()
+                self.tower_cost = self.tower_selector.get_selected_tower_cost()
+                return  # Don't try to place a tower if we just selected one
 
         # Tower placement
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:  # Left click
