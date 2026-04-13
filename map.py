@@ -6,7 +6,7 @@ from enemies import Enemy, Soldier, Tank, Scout, Boss
 from src.difficulty import DifficultyManager
 from src.direction import Direction
 from src.point import Point
-from tower import Tower, BasicTower
+from towers import Tower, BasicTower
 
 
 class Bullet:

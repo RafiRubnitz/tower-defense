@@ -1,50 +1,23 @@
-from typing import Tuple, List
+"""Basic Tower - balanced all-rounder."""
+
+from typing import List
 
 import pygame
 
 from enemies import Enemy
 from src.point import Point
+from towers.base import Tower
 
-# Import Bullet from map module (will be available at runtime)
+
 def get_bullet_class():
     from map import Bullet
     return Bullet
 
 
-class Tower(object):
-    range: float
-    power: float
-    cool_down_time: int
-    level: int
-    pos: pygame.Rect
-    size: Tuple[int, int]
-    color: Tuple[int, int, int]
-    range_enable: bool
-    cool_down: int
-
-    def draw(self, win: pygame.Surface):
-        ...
-
-    def update(self, dt: int, enemies: List[Enemy], *args, **kwargs):
-        ...
-
-    def handle_event(self, event: pygame.event.Event):
-        ...
-
-    def find_enemy(self):
-        ...
-
-    def shot(self, target: Point):
-        ...
-
-    def upgrade(self, *args, **kwargs):
-        ...
-
-    def mouse_functionality(self) -> None:
-        ...
-
-
 class BasicTower(Tower):
+
+    tower_type = "Basic"
+    cost = 100
 
     def __init__(self, pos: Point):
         self.size = (20, 20)
@@ -67,7 +40,6 @@ class BasicTower(Tower):
         self.cool_down -= dt
         if self.cool_down <= 0:
             for enemy in enemies:
-                # Calculate distance from tower center to enemy center
                 tower_center_x = self.pos.x + (self.size[0] // 2)
                 tower_center_y = self.pos.y + (self.size[1] // 2)
                 enemy_center_x = enemy.pos.x + (enemy.size[0] // 2)
@@ -77,7 +49,6 @@ class BasicTower(Tower):
                 dy = enemy_center_y - tower_center_y
                 distance_squared = dx * dx + dy * dy
 
-                # Range is in grid units (20px per unit)
                 range_squared = (self.range * 20) ** 2
 
                 if distance_squared <= range_squared:
@@ -91,27 +62,22 @@ class BasicTower(Tower):
             bullets.append(Bullet(tower_center_x, tower_center_y, target, self.power, self.color))
         else:
             target.life_point -= self.power
-            print(f"Enemy: {target.id} hit, life point: {target.life_point}")
 
     def draw(self, win) -> None:
         center_x = self.pos.x + (self.size[0] // 2)
         center_y = self.pos.y + (self.size[1] // 2)
 
-        # Draw tower base (square with rounded corners effect)
         base_rect = pygame.Rect(self.pos.x + 2, self.pos.y + 2, self.size[0] - 4, self.size[1] - 4)
         pygame.draw.rect(win, self.base_color, base_rect)
-        pygame.draw.rect(win, (0, 0, 0), base_rect, 2)  # Border
+        pygame.draw.rect(win, (0, 0, 0), base_rect, 2)
 
-        # Draw turret (circle in the center)
         pygame.draw.circle(win, self.turret_color, (center_x, center_y), 6)
-        pygame.draw.circle(win, (0, 0, 0), (center_x, center_y), 6, 2)  # Turret border
+        pygame.draw.circle(win, (0, 0, 0), (center_x, center_y), 6, 2)
 
-        # Draw cannon barrel (small line pointing toward last target or up)
         barrel_end_x = center_x
         barrel_end_y = center_y - 8
         pygame.draw.line(win, (30, 30, 30), (center_x, center_y), (barrel_end_x, barrel_end_y), 3)
 
-        # Draw range indicator when hovered
         if self.range_enable:
             range_surface = pygame.Surface((self.range * 40, self.range * 40), pygame.SRCALPHA)
             pygame.draw.circle(range_surface, (0, 255, 0, 50),
