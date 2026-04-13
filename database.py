@@ -214,21 +214,43 @@ class Database:
                 tower_cost=100
             )
 
-            # יצירת הגדרות גלים
+            # יצירת הגדרות גלים עם כיוונון איזון משחק
+            # Recommended wave configuration parameters
+            WAVE_CONFIGS = {
+                1: {"total_enemies": 6, "spawn_interval": 400, "composition": {"soldier": 6}},
+                2: {"total_enemies": 8, "spawn_interval": 350, "composition": {"soldier": 8}},
+                3: {"total_enemies": 10, "spawn_interval": 300, "composition": {"soldier": 7, "tank": 3}},
+                4: {"total_enemies": 13, "spawn_interval": 250, "composition": {"soldier": 8, "tank": 5}},
+                5: {"total_enemies": 17, "spawn_interval": 200, "composition": {"soldier": 10, "tank": 5, "scout": 2}},
+            }
+
             for wave in range(1, 11):
-                enemy_comp = {"soldier": max(1, wave)}
-                if wave >= 3:
-                    enemy_comp["tank"] = max(0, wave - 2)
-                if wave >= 5:
-                    enemy_comp["scout"] = max(0, wave - 4)
-                if wave % 5 == 0:
-                    enemy_comp["boss"] = 1
+                if wave <= 5:
+                    # Use recommended parameters for waves 1-5
+                    wave_cfg = WAVE_CONFIGS[wave]
+                    total_enemies = wave_cfg["total_enemies"]
+                    spawn_interval = wave_cfg["spawn_interval"]
+                    enemy_comp = wave_cfg["composition"]
+                else:
+                    # For waves 6-10, scale the wave 5 config exponentially
+                    base_cfg = WAVE_CONFIGS[5]
+                    scale = 1.25 ** (wave - 5)
+                    total_enemies = max(17, int(base_cfg["total_enemies"] * scale))
+                    spawn_interval = max(150, int(base_cfg["spawn_interval"] * (0.9 ** (wave - 5))))
+
+                    # Build composition with scaled enemy types
+                    enemy_comp = {}
+                    enemy_comp["soldier"] = max(1, int(base_cfg["composition"]["soldier"] * scale))
+                    enemy_comp["tank"] = max(0, int(base_cfg["composition"]["tank"] * scale))
+                    enemy_comp["scout"] = max(0, int(base_cfg["composition"]["scout"] * scale))
+                    if wave % 5 == 0:
+                        enemy_comp["boss"] = 1
 
                 self.save_wave_config(
                     round_config_id=config_id,
                     wave_number=wave,
-                    total_enemies=sum(enemy_comp.values()),
-                    spawn_interval=max(20, 60 - wave * 4),
+                    total_enemies=total_enemies,
+                    spawn_interval=spawn_interval,
                     enemy_composition=enemy_comp
                 )
 
