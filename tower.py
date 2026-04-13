@@ -2,7 +2,7 @@ from typing import Tuple, List
 
 import pygame
 
-from enemy import Enemy
+from enemies import Enemy
 from src.point import Point
 
 # Import Bullet from map module (will be available at runtime)

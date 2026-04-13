@@ -2,7 +2,7 @@ from typing import List, Tuple, Optional
 
 import pygame
 
-from enemy import Enemy, Soldier, Tank, Scout, Boss
+from enemies import Enemy, Soldier, Tank, Scout, Boss
 from src.difficulty import DifficultyManager
 from src.direction import Direction
 from src.point import Point
