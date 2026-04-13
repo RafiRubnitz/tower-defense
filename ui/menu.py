@@ -221,7 +221,7 @@ class MenuManager:
 
     def _init_map_selection(self):
         """אתחול מסך בחירת מפה"""
-        button_width = 200
+        button_width = 280
         button_height = 45
         start_x = 20  # Left-aligned list
 
