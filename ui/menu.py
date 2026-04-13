@@ -1,17 +1,7 @@
-from enum import Enum
 from typing import Optional, Callable, List, Dict
 import pygame
 
-
-class GameState(Enum):
-    """מצבי משחק שונים"""
-    MAIN_MENU = "main_menu"
-    MAP_SELECTION = "map_selection"
-    SETTINGS = "settings"
-    PLAYING = "playing"
-    PAUSED = "paused"
-    GAME_OVER = "game_over"
-    VICTORY = "victory"
+from src.game_state import GameState
 
 
 class Button:
@@ -171,7 +161,7 @@ class MenuManager:
         """אתחול מסך בחירת מפה"""
         button_width = 200
         button_height = 45
-        start_x = (self.screen_width - button_width) // 2
+        start_x = 20  # Left-aligned list
 
         # כפתור חזרה
         self.buttons['btn_back_maps'] = Button(
@@ -180,9 +170,9 @@ class MenuManager:
             font_size=28
         )
 
-        # כפתור התחל
+        # כפתור התחל - bottom center
         self.buttons['btn_start_game'] = Button(
-            start_x, 500, button_width, button_height,
+            (self.screen_width - button_width) // 2, 545, button_width, button_height,
             "Start Game", self._on_start_game_click,
             font_size=32
         )
@@ -190,6 +180,9 @@ class MenuManager:
 
         # כפתורי בחירת מפה יווצרו דינמית
         self.map_buttons: List[Button] = []
+
+        # Selected map data for preview
+        self.selected_map_data: Optional[Dict] = None
 
         # תוויות
         self.labels['map_title'] = Label(
@@ -339,6 +332,12 @@ class MenuManager:
         self.buttons['btn_start_game'].enabled = True
         self.buttons['btn_start_game'].text = f"Start: {map_name}"
 
+        # Load full map data for preview
+        from database import Database
+        db = Database()
+        self.selected_map_data = db.get_map(map_id)
+        db.close()
+
     def _on_start_game_click(self):
         """התחלת משחק"""
         if self.selected_map_id:
@@ -403,15 +402,14 @@ class MenuManager:
         db.close()
 
         self.map_buttons = []
-        button_width = 350
+        button_width = 300
         button_height = 45
-        start_x = (self.screen_width - button_width) // 2
+        start_x = 20
         start_y = 100
 
         for i, map_info in enumerate(maps):
             difficulty_str = "★" * map_info['difficulty']
-            builtin_str = " [BUILTIN]" if map_info['is_builtin'] else ""
-            btn_text = f"{map_info['name']}{builtin_str} ({difficulty_str})"
+            btn_text = f"{map_info['name']} ({difficulty_str})"
 
             btn = Button(
                 start_x, start_y + i * (button_height + 10),
@@ -419,9 +417,76 @@ class MenuManager:
                 btn_text,
                 lambda mid=map_info['id'], mname=map_info['name']:
                 self._on_map_selected(mid, mname),
-                font_size=28
+                font_size=24
             )
             self.map_buttons.append(btn)
+
+    def _draw_map_preview(self):
+        """Draw a mini-map preview of the selected map"""
+        if not self.selected_map_data:
+            return
+
+        # Preview area: right side of screen
+        preview_x = 350
+        preview_y = 90
+        preview_w = 580
+        preview_h = 420
+
+        # Background
+        pygame.draw.rect(self.win, (20, 20, 30), (preview_x, preview_y, preview_w, preview_h))
+        pygame.draw.rect(self.win, (80, 80, 100), (preview_x, preview_y, preview_w, preview_h), 2)
+
+        # Map grid dimensions
+        map_cols = self.selected_map_data.get('width', 40)
+        map_rows = self.selected_map_data.get('height', 30)
+
+        cell_w = preview_w / map_cols
+        cell_h = preview_h / map_rows
+
+        # Draw grass background
+        pygame.draw.rect(self.win, (34, 100, 34), (preview_x, preview_y, preview_w, preview_h))
+
+        # Build set of path coordinates for quick lookup
+        path_set = set()
+        path_list = self.selected_map_data.get('path', [])
+        for pt in path_list:
+            if isinstance(pt, (list, tuple)) and len(pt) >= 2:
+                path_set.add((int(pt[0]), int(pt[1])))
+
+        # Draw path cells
+        for col, row in path_set:
+            px = preview_x + col * cell_w
+            py = preview_y + row * cell_h
+            pygame.draw.rect(self.win, (120, 120, 120),
+                             (int(px), int(py), max(2, int(cell_w)), max(2, int(cell_h))))
+
+        # Draw start and end markers
+        if path_list:
+            start_pt = path_list[0]
+            end_pt = path_list[-1]
+            for pt, color in [(start_pt, (0, 200, 0)), (end_pt, (200, 0, 0))]:
+                if isinstance(pt, (list, tuple)) and len(pt) >= 2:
+                    px = int(preview_x + pt[0] * cell_w)
+                    py = int(preview_y + pt[1] * cell_h)
+                    pygame.draw.rect(self.win, color,
+                                     (px, py, max(4, int(cell_w * 1.5)), max(4, int(cell_h * 1.5))))
+
+        # Preview label
+        font = pygame.font.Font(None, 28)
+        label = font.render("Map Preview", True, (200, 200, 200))
+        self.win.blit(label, (preview_x + 10, preview_y - 28))
+
+        # Map info
+        info_y = preview_y + preview_h + 10
+        diff = self.selected_map_data.get('difficulty', 1)
+        diff_str = "★" * diff + "☆" * (3 - diff)
+        info_font = pygame.font.Font(None, 24)
+        name_text = info_font.render(f"{self.selected_map_data['name']}  Difficulty: {diff_str}", True, (200, 200, 200))
+        self.win.blit(name_text, (preview_x, info_y))
+
+        path_len = len(path_list)
+        path_text = info_font.render(f"Path length: {path_len} cells", True, (150, 150, 180))
+        self.win.blit(path_text, (preview_x, info_y + 22))
 
     def _draw_map_selection(self):
         """צייר מסך בחירת מפות"""
@@ -437,6 +502,15 @@ class MenuManager:
         # כפתורי מפות
         for btn in self.map_buttons:
             btn.draw(self.win)
+
+        # Map preview on right side
+        self._draw_map_preview()
+
+        # Instructions if no map selected
+        if not self.selected_map_data:
+            font = pygame.font.Font(None, 28)
+            hint = font.render("Select a map from the list", True, (120, 120, 140))
+            self.win.blit(hint, (360, 270))
 
     def _draw_settings(self):
         """צייר מסך הגדרות"""
