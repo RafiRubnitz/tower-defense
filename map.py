@@ -111,7 +111,7 @@ class Filed:
 
 class PathField(Filed):
 
-    def __init__(self, col, row, width, height, color=(105, 105, 105)):  # Gray road
+    def __init__(self, col, row, width, height, color=(204, 153, 102)):  # Tan/brown road
         super().__init__(col, row, width, height, color)
 
 
@@ -148,14 +148,14 @@ class Map(object):
         self._draw_parsed_field(win)
 
     def _draw_grid(self, win: pygame.Surface):
-        # Draw grass background for entire map
-        grass_color = (34, 139, 34)  # Forest green
+        # Draw grass background for entire map - bright green
+        grass_color = (51, 204, 51)  # Bright retro green
         for row in self.grid:
             for point in row:
                 pygame.draw.rect(win, grass_color, point.pos)
 
         # Draw grid lines for visual clarity
-        grid_line_color = (25, 120, 25)  # Darker green
+        grid_line_color = (20, 180, 20)  # Lighter green grid
         for col in range(0, self.size[0] * 20, 20):
             pygame.draw.line(win, grid_line_color, (col, 0), (col, self.size[1] * 20), 1)
         for row in range(0, self.size[1] * 20, 20):
@@ -166,8 +166,8 @@ class Map(object):
         for point in self.path:
             # Draw road base
             pygame.draw.rect(win, point.color, point.pos)
-            # Add road border
-            border_color = (70, 70, 70)
+            # Add road border - darker brown
+            border_color = (139, 90, 43)
             pygame.draw.rect(win, border_color, point.pos, 2)
 
         # Second pass: draw center line markings

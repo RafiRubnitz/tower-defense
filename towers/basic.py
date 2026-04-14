@@ -53,17 +53,13 @@ class BasicTower(Tower):
             target.life_point -= self.power
 
     def draw(self, win: pygame.Surface):
-        cx = self.pos.x + (self.size[0] // 2)
-        cy = self.pos.y + (self.size[1] // 2)
+        # Retro pixel-art style - simple outlined square with magenta border
+        tower_rect = pygame.Rect(self.pos.x + 1, self.pos.y + 1, self.size[0] - 2, self.size[1] - 2)
 
-        base_rect = pygame.Rect(self.pos.x + 2, self.pos.y + 2, self.size[0] - 4, self.size[1] - 4)
-        pygame.draw.rect(win, self.base_color, base_rect)
-        pygame.draw.rect(win, (0, 0, 0), base_rect, 2)
-
-        pygame.draw.circle(win, self.turret_color, (cx, cy), 6)
-        pygame.draw.circle(win, (0, 0, 0), (cx, cy), 6, 2)
-
-        pygame.draw.line(win, (30, 30, 30), (cx, cy), (cx, cy - 8), 3)
+        # Light green fill
+        pygame.draw.rect(win, (100, 200, 100), tower_rect)
+        # Magenta/pink border
+        pygame.draw.rect(win, (255, 0, 255), tower_rect, 2)
 
         self._draw_range_circle(win)
 
