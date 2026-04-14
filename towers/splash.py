@@ -62,24 +62,13 @@ class SplashTower(Tower):
                     enemy.life_point -= self.power * 0.6  # 60% splash damage
 
     def draw(self, win: pygame.Surface):
-        cx = self.pos.x + (self.size[0] // 2)
-        cy = self.pos.y + (self.size[1] // 2)
+        # Retro pixel-art style - simple outlined square with magenta border
+        tower_rect = pygame.Rect(self.pos.x + 1, self.pos.y + 1, self.size[0] - 2, self.size[1] - 2)
 
-        # Orange base
-        base_rect = pygame.Rect(self.pos.x + 1, self.pos.y + 1, self.size[0] - 2, self.size[1] - 2)
-        pygame.draw.rect(win, (100, 50, 20), base_rect)
-        pygame.draw.rect(win, (180, 80, 30), base_rect, 2)
-
-        # Mortar barrel (wide short barrel pointing up)
-        pygame.draw.circle(win, (200, 100, 50), (cx, cy), 6)
-        pygame.draw.circle(win, (120, 60, 20), (cx, cy), 6, 2)
-        pygame.draw.rect(win, (80, 40, 10), pygame.Rect(cx - 3, cy - 7, 6, 7))
-
-        # Spark dots (aesthetic)
-        for spark_offset in [(-6, -6), (6, -6), (-6, 6), (6, 6)]:
-            sx = self.pos.x + self.size[0] // 2 + spark_offset[0]
-            sy = self.pos.y + self.size[1] // 2 + spark_offset[1]
-            pygame.draw.circle(win, (255, 150, 50), (sx, sy), 2)
+        # Orange fill for splash
+        pygame.draw.rect(win, (220, 150, 80), tower_rect)
+        # Magenta/pink border
+        pygame.draw.rect(win, (255, 0, 255), tower_rect, 2)
 
         self._draw_range_circle(win)
 

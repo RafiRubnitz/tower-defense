@@ -102,18 +102,10 @@ class Soldier(Enemy):
 
         self._draw_health_bar(win)
 
-        # Body
-        body_rect = pygame.Rect(x + 3, y + 7, w - 6, h - 7)
-        pygame.draw.rect(win, self.uniform_color, body_rect)
-        pygame.draw.rect(win, (0, 0, 0), body_rect, 2)
-
-        # Helmet
-        helmet_center = (x + w // 2, y + 5)
-        pygame.draw.circle(win, self.helmet_color, helmet_center, 5)
-        pygame.draw.circle(win, (0, 0, 0), helmet_center, 5, 2)
-
-        # Face
-        pygame.draw.circle(win, self.skin_color, (x + w // 2, y + 4), 3)
+        # Simple retro style - filled square with black outline
+        enemy_rect = pygame.Rect(x + 1, y + 1, w - 2, h - 2)
+        pygame.draw.rect(win, (255, 100, 100), enemy_rect)
+        pygame.draw.rect(win, (0, 0, 0), enemy_rect, 1)
 
 
 class Tank(Enemy):
@@ -165,22 +157,10 @@ class Tank(Enemy):
 
         self._draw_health_bar(win)
 
-        # Tank body (dark green)
-        body_rect = pygame.Rect(x + 1, y + 4, w - 2, h - 4)
-        pygame.draw.rect(win, (60, 80, 60), body_rect)
-        pygame.draw.rect(win, (20, 40, 20), body_rect, 2)
-
-        # Tracks (dark stripes on sides)
-        pygame.draw.rect(win, (30, 30, 30), pygame.Rect(x, y + 6, 4, h - 8))
-        pygame.draw.rect(win, (30, 30, 30), pygame.Rect(x + w - 4, y + 6, 4, h - 8))
-
-        # Turret (circle)
-        turret_center = (x + w // 2, y + h // 2)
-        pygame.draw.circle(win, (80, 100, 80), turret_center, 6)
-        pygame.draw.circle(win, (20, 40, 20), turret_center, 6, 2)
-
-        # Cannon barrel
-        pygame.draw.rect(win, (20, 40, 20), pygame.Rect(x + w // 2 - 1, y + 2, 3, 8))
+        # Simple retro style - filled square with black outline
+        enemy_rect = pygame.Rect(x + 1, y + 1, w - 2, h - 2)
+        pygame.draw.rect(win, (100, 150, 100), enemy_rect)
+        pygame.draw.rect(win, (0, 0, 0), enemy_rect, 1)
 
 
 class Scout(Enemy):
@@ -232,20 +212,10 @@ class Scout(Enemy):
 
         self._draw_health_bar(win)
 
-        # Diamond body shape
-        cx, cy = x + w // 2, y + h // 2
-        pygame.draw.polygon(win, (255, 165, 0), [
-            (cx, y + 1),
-            (x + w - 1, cy),
-            (cx, y + h - 1),
-            (x + 1, cy),
-        ])
-        pygame.draw.polygon(win, (200, 100, 0), [
-            (cx, y + 1),
-            (x + w - 1, cy),
-            (cx, y + h - 1),
-            (x + 1, cy),
-        ], 2)
+        # Simple retro style - filled square with black outline
+        enemy_rect = pygame.Rect(x + 1, y + 1, w - 2, h - 2)
+        pygame.draw.rect(win, (255, 165, 0), enemy_rect)
+        pygame.draw.rect(win, (0, 0, 0), enemy_rect, 1)
 
 
 class Boss(Enemy):
@@ -300,28 +270,7 @@ class Boss(Enemy):
 
         self._draw_health_bar(win)
 
-        # Large dark red body
-        body_rect = pygame.Rect(x + 2, y + 6, w - 4, h - 6)
-        pygame.draw.rect(win, (139, 0, 0), body_rect)
-        pygame.draw.rect(win, (80, 0, 0), body_rect, 2)
-
-        # Crown spikes (gold)
-        cx = x + w // 2
-        crown_points = [
-            (x + 3, y + 6),
-            (x + 3, y + 1),
-            (cx - 4, y + 5),
-            (cx, y),
-            (cx + 4, y + 5),
-            (x + w - 3, y + 1),
-            (x + w - 3, y + 6),
-        ]
-        pygame.draw.polygon(win, (255, 215, 0), crown_points)
-        pygame.draw.polygon(win, (180, 150, 0), crown_points, 1)
-
-        # Boss face detail
-        eye_y = y + 12
-        pygame.draw.circle(win, (255, 50, 50), (x + 9, eye_y), 3)
-        pygame.draw.circle(win, (255, 50, 50), (x + w - 9, eye_y), 3)
-        pygame.draw.circle(win, (0, 0, 0), (x + 9, eye_y), 1)
-        pygame.draw.circle(win, (0, 0, 0), (x + w - 9, eye_y), 1)
+        # Simple retro style - filled square with black outline
+        enemy_rect = pygame.Rect(x + 1, y + 1, w - 2, h - 2)
+        pygame.draw.rect(win, (200, 50, 50), enemy_rect)
+        pygame.draw.rect(win, (0, 0, 0), enemy_rect, 1)

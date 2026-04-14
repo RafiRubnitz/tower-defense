@@ -87,17 +87,13 @@ class LaserTower(Tower):
         cx = self.pos.x + (self.size[0] // 2)
         cy = self.pos.y + (self.size[1] // 2)
 
-        # Yellow base
-        base_rect = pygame.Rect(self.pos.x + 2, self.pos.y + 2, self.size[0] - 4, self.size[1] - 4)
-        pygame.draw.rect(win, (200, 200, 0), base_rect)
-        pygame.draw.rect(win, (255, 255, 100), base_rect, 2)
+        # Retro pixel-art style - simple outlined square with magenta border
+        tower_rect = pygame.Rect(self.pos.x + 1, self.pos.y + 1, self.size[0] - 2, self.size[1] - 2)
 
-        # Turret
-        pygame.draw.circle(win, (255, 255, 0), (cx, cy), 6)
-        pygame.draw.circle(win, (200, 200, 0), (cx, cy), 6, 2)
-
-        # Laser barrel pointing up
-        pygame.draw.line(win, (255, 255, 100), (cx, cy), (cx, cy - 9), 2)
+        # Yellow fill for laser
+        pygame.draw.rect(win, (220, 220, 100), tower_rect)
+        # Magenta/pink border
+        pygame.draw.rect(win, (255, 0, 255), tower_rect, 2)
 
         # Draw active laser beam to last target if available
         if self._last_target:
@@ -105,8 +101,7 @@ class LaserTower(Tower):
             target_cy = self._last_target.pos.y + (self._last_target.size[1] // 2)
 
             # Draw pulsing laser line
-            pygame.draw.line(win, (255, 255, 100), (cx, cy), (target_cx, target_cy), 3)
-            pygame.draw.line(win, (255, 150, 0), (cx, cy), (target_cx, target_cy), 1)
+            pygame.draw.line(win, (255, 255, 100), (cx, cy), (target_cx, target_cy), 2)
 
         self._draw_range_circle(win)
 

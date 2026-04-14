@@ -46,27 +46,13 @@ class FreezeTower(Tower):
         target.slow_timer = self.SLOW_DURATION
 
     def draw(self, win: pygame.Surface):
-        cx = self.pos.x + (self.size[0] // 2)
-        cy = self.pos.y + (self.size[1] // 2)
+        # Retro pixel-art style - simple outlined square with magenta border
+        tower_rect = pygame.Rect(self.pos.x + 1, self.pos.y + 1, self.size[0] - 2, self.size[1] - 2)
 
-        # Icy blue base
-        base_rect = pygame.Rect(self.pos.x + 2, self.pos.y + 2, self.size[0] - 4, self.size[1] - 4)
-        pygame.draw.rect(win, (50, 150, 200), base_rect)
-        pygame.draw.rect(win, (100, 200, 255), base_rect, 2)
-
-        # Turret
-        pygame.draw.circle(win, (100, 200, 255), (cx, cy), 6)
-        pygame.draw.circle(win, (50, 150, 200), (cx, cy), 6, 2)
-
-        # Snowflake-style barrel (two perpendicular lines)
-        pygame.draw.line(win, (150, 220, 255), (cx - 5, cy), (cx + 5, cy), 2)
-        pygame.draw.line(win, (150, 220, 255), (cx, cy - 5), (cx, cy + 5), 2)
-
-        # Ice particle dots
-        for offset in [(-5, -5), (5, -5), (-5, 5), (5, 5)]:
-            px = cx + offset[0]
-            py = cy + offset[1]
-            pygame.draw.circle(win, (150, 220, 255), (px, py), 1)
+        # Icy blue fill for freeze
+        pygame.draw.rect(win, (150, 200, 255), tower_rect)
+        # Magenta/pink border
+        pygame.draw.rect(win, (255, 0, 255), tower_rect, 2)
 
         self._draw_range_circle(win)
 

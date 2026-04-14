@@ -48,23 +48,13 @@ class SniperTower(Tower):
             target.life_point -= self.power
 
     def draw(self, win: pygame.Surface):
-        cx = self.pos.x + (self.size[0] // 2)
-        cy = self.pos.y + (self.size[1] // 2)
+        # Retro pixel-art style - simple outlined square with magenta border
+        tower_rect = pygame.Rect(self.pos.x + 1, self.pos.y + 1, self.size[0] - 2, self.size[1] - 2)
 
-        # Dark base
-        base_rect = pygame.Rect(self.pos.x + 3, self.pos.y + 3, self.size[0] - 6, self.size[1] - 6)
-        pygame.draw.rect(win, (60, 30, 30), base_rect)
-        pygame.draw.rect(win, (120, 40, 40), base_rect, 2)
-
-        # Turret
-        pygame.draw.circle(win, (180, 50, 50), (cx, cy), 5)
-        pygame.draw.circle(win, (120, 20, 20), (cx, cy), 5, 2)
-
-        # Long barrel
-        pygame.draw.line(win, (100, 30, 30), (cx, cy), (cx, cy - 11), 2)
-
-        # Level indicator dot
-        pygame.draw.circle(win, (255, 100, 100), (self.pos.x + 3, self.pos.y + 3), 2)
+        # Red fill for sniper
+        pygame.draw.rect(win, (200, 100, 100), tower_rect)
+        # Magenta/pink border
+        pygame.draw.rect(win, (255, 0, 255), tower_rect, 2)
 
         self._draw_range_circle(win)
 
