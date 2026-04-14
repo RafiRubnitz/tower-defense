@@ -87,13 +87,14 @@ class LaserTower(Tower):
         cx = self.pos.x + (self.size[0] // 2)
         cy = self.pos.y + (self.size[1] // 2)
 
-        # Retro pixel-art style - simple outlined square with magenta border
-        tower_rect = pygame.Rect(self.pos.x + 1, self.pos.y + 1, self.size[0] - 2, self.size[1] - 2)
+        # Laser tower - cross pattern with center core
+        # Cross beams
+        pygame.draw.line(win, (220, 220, 100), (self.pos.x + 2, cy), (self.pos.x + 18, cy), 2)
+        pygame.draw.line(win, (220, 220, 100), (cx, self.pos.y + 2), (cx, self.pos.y + 18), 2)
 
-        # Yellow fill for laser
-        pygame.draw.rect(win, (220, 220, 100), tower_rect)
-        # Magenta/pink border
-        pygame.draw.rect(win, (255, 0, 255), tower_rect, 2)
+        # Center core
+        pygame.draw.circle(win, (255, 255, 0), (cx, cy), 5)  # Bright yellow
+        pygame.draw.circle(win, (255, 0, 255), (cx, cy), 5, 1)  # Magenta border
 
         # Draw active laser beam to last target if available
         if self._last_target:

@@ -46,13 +46,21 @@ class FreezeTower(Tower):
         target.slow_timer = self.SLOW_DURATION
 
     def draw(self, win: pygame.Surface):
-        # Retro pixel-art style - simple outlined square with magenta border
-        tower_rect = pygame.Rect(self.pos.x + 1, self.pos.y + 1, self.size[0] - 2, self.size[1] - 2)
+        # Freeze tower - pointy pyramid shape
+        center_x = self.pos.x + 10
 
-        # Icy blue fill for freeze
-        pygame.draw.rect(win, (150, 200, 255), tower_rect)
-        # Magenta/pink border
-        pygame.draw.rect(win, (255, 0, 255), tower_rect, 2)
+        # Base
+        base_rect = pygame.Rect(self.pos.x + 2, self.pos.y + 12, 16, 6)
+        pygame.draw.rect(win, (100, 150, 200), base_rect)  # Dark blue
+
+        # Pyramid point
+        points = [
+            (center_x, self.pos.y + 1),  # top
+            (self.pos.x + 18, self.pos.y + 12),  # bottom right
+            (self.pos.x + 2, self.pos.y + 12)   # bottom left
+        ]
+        pygame.draw.polygon(win, (150, 200, 255), points)  # Ice blue
+        pygame.draw.polygon(win, (255, 0, 255), points, 1)  # Magenta border
 
         self._draw_range_circle(win)
 

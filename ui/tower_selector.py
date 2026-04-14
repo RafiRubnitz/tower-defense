@@ -127,12 +127,12 @@ class TowerSelector:
 
         # Tower name
         name_text = medium_font.render(tower_info['name'], True, (255, 255, 255))
-        win.blit(name_text, (icon_x + 30, rect.y + 8))
+        win.blit(name_text, (icon_x + 30, rect.y + 5))
 
-        # Tower cost - gold color
+        # Tower cost and stats on next line
         cost_color = (255, 215, 0) if is_selected else (200, 180, 100)
         cost_text = small_font.render(f"Cost: ${tower_info['cost']}", True, cost_color)
-        win.blit(cost_text, (icon_x + 30, rect.y + 32))
+        win.blit(cost_text, (icon_x + 30, rect.y + 28))
 
         # Tower stats (range and damage)
         tower_cls = tower_info['class']
@@ -142,10 +142,10 @@ class TowerSelector:
             range_val = getattr(temp, 'range', 0)
             power_val = getattr(temp, 'power', 0)
 
-            stats_text = f"R:{range_val}  DMG:{power_val}"
+            stats_text = f"R:{range_val}  P:{power_val}"
             stats_color = (180, 200, 255) if is_selected else (140, 160, 200)
             stats_rendered = small_font.render(stats_text, True, stats_color)
-            win.blit(stats_rendered, (rect.right - 130, rect.y + 32))
+            win.blit(stats_rendered, (icon_x + 30, rect.y + 43))
         except:
             pass
 

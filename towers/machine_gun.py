@@ -48,13 +48,18 @@ class MachineGunTower(Tower):
             target.life_point -= self.power
 
     def draw(self, win: pygame.Surface):
-        # Retro pixel-art style - simple outlined square with magenta border
-        tower_rect = pygame.Rect(self.pos.x + 1, self.pos.y + 1, self.size[0] - 2, self.size[1] - 2)
+        # Machine gun - wide base with barrel
+        base_rect = pygame.Rect(self.pos.x + 2, self.pos.y + 8, 16, 10)
+        pygame.draw.rect(win, (140, 180, 80), base_rect)  # Dark green base
 
-        # Bright green fill for machine gun
-        pygame.draw.rect(win, (150, 220, 100), tower_rect)
-        # Magenta/pink border
-        pygame.draw.rect(win, (255, 0, 255), tower_rect, 2)
+        # Barrel
+        barrel_rect = pygame.Rect(self.pos.x + 4, self.pos.y + 3, 12, 6)
+        pygame.draw.rect(win, (150, 220, 100), barrel_rect)  # Bright green
+        # Barrel detail
+        pygame.draw.line(win, (100, 150, 60), (self.pos.x + 10, self.pos.y + 3), (self.pos.x + 10, self.pos.y + 9), 1)
+
+        # Magenta border
+        pygame.draw.rect(win, (255, 0, 255), pygame.Rect(self.pos.x, self.pos.y, 20, 20), 1)
 
         self._draw_range_circle(win)
 

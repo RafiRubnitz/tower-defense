@@ -249,28 +249,43 @@ class MapEditorScreen:
         if not self.path:
             return
 
+        # Ensure path contains tuples and valid numbers
+        path = []
+        for p in self.path:
+            try:
+                if isinstance(p, (list, tuple)):
+                    col, row = int(p[0]), int(p[1])
+                    path.append((col, row))
+            except (TypeError, ValueError, IndexError):
+                continue
+
+        if not path:
+            return
+
         # Draw all path cells
-        for col, row in self.path:
+        for col, row in path:
             rect = pygame.Rect(col * self.CELL_SIZE, row * self.CELL_SIZE, self.CELL_SIZE, self.CELL_SIZE)
             pygame.draw.rect(win, self.COLOR_PATH, rect)
 
         # Draw path line connecting cells
-        if len(self.path) > 1:
-            points = [
-                (col * self.CELL_SIZE + self.CELL_SIZE // 2, row * self.CELL_SIZE + self.CELL_SIZE // 2)
-                for col, row in self.path
-            ]
-            pygame.draw.lines(win, (200, 200, 0), points, 3)
+        if len(path) > 1:
+            points = []
+            for col, row in path:
+                x = col * self.CELL_SIZE + self.CELL_SIZE // 2
+                y = row * self.CELL_SIZE + self.CELL_SIZE // 2
+                points.append((x, y))
+            if len(points) > 1:
+                pygame.draw.lines(win, (200, 200, 0), points, 3)
 
         # Draw start marker (green)
-        if self.path:
-            col, row = self.path[0]
+        if path:
+            col, row = path[0]
             rect = pygame.Rect(col * self.CELL_SIZE + 2, row * self.CELL_SIZE + 2, self.CELL_SIZE - 4, self.CELL_SIZE - 4)
             pygame.draw.rect(win, (0, 255, 0), rect, 2)
 
         # Draw end marker (red)
-        if len(self.path) > 1:
-            col, row = self.path[-1]
+        if len(path) > 1:
+            col, row = path[-1]
             rect = pygame.Rect(col * self.CELL_SIZE + 2, row * self.CELL_SIZE + 2, self.CELL_SIZE - 4, self.CELL_SIZE - 4)
             pygame.draw.rect(win, (255, 0, 0), rect, 2)
 

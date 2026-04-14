@@ -62,13 +62,16 @@ class SplashTower(Tower):
                     enemy.life_point -= self.power * 0.6  # 60% splash damage
 
     def draw(self, win: pygame.Surface):
-        # Retro pixel-art style - simple outlined square with magenta border
-        tower_rect = pygame.Rect(self.pos.x + 1, self.pos.y + 1, self.size[0] - 2, self.size[1] - 2)
+        # Splash tower - round with wide area
+        center_x = self.pos.x + 10
+        center_y = self.pos.y + 10
 
-        # Orange fill for splash
-        pygame.draw.rect(win, (220, 150, 80), tower_rect)
-        # Magenta/pink border
-        pygame.draw.rect(win, (255, 0, 255), tower_rect, 2)
+        # Main dome
+        pygame.draw.circle(win, (220, 150, 80), (center_x, center_y), 9)  # Orange
+        # Top accent
+        pygame.draw.circle(win, (255, 200, 100), (center_x, center_y - 4), 4)
+        # Border
+        pygame.draw.circle(win, (255, 0, 255), (center_x, center_y), 9, 1)
 
         self._draw_range_circle(win)
 
