@@ -22,6 +22,8 @@ class Game:
     menu: MenuManager
     current_round: Optional[Round]
     paused: bool
+    map_editor: Optional['MapEditorScreen']
+    db: 'Database'
 
     def __init__(self, win: pygame.Surface):
         pygame.font.init()
@@ -31,6 +33,11 @@ class Game:
         self.state = GameState.MAIN_MENU
         self.current_round = None
         self.paused = False
+        self.map_editor = None
+
+        # Database connection
+        from database import Database
+        self.db = Database()
 
         # MenuManager receives a reference to this Game so it can call
         # start_game_from_menu() when the player confirms a map selection.
@@ -88,6 +95,11 @@ class Game:
                 return_to_menu=self.current_round.return_to_menu
             )
 
+    def _init_map_editor(self):
+        """Initialize map editor screen."""
+        from ui.map_editor import MapEditorScreen
+        self.map_editor = MapEditorScreen(self, self.db, (self.win.get_width(), self.win.get_height()))
+
     # ------------------------------------------------------------------
     # Main loop
     # ------------------------------------------------------------------
@@ -114,6 +126,17 @@ class Game:
                     if self.current_round is not None:
                         self.current_round.handle_event(event)
 
+                elif self.state == GameState.MAP_EDITOR:
+                    # Route events to map editor
+                    if self.map_editor is None:
+                        self._init_map_editor()
+                    new_state = self.map_editor.handle_event(event)
+                    if new_state:
+                        self.state = new_state
+                        self.menu.current_state = new_state
+                        if new_state == GameState.MAP_SELECTION:
+                            self.menu._refresh_map_buttons()
+
                 else:
                     # All menu states — route events to MenuManager
                     self.menu.handle_event(event)
@@ -122,6 +145,9 @@ class Game:
             if self.state == GameState.PLAYING and not self.paused:
                 if self.current_round is not None:
                     self.current_round.update(dt)
+            elif self.state == GameState.MAP_EDITOR:
+                if self.map_editor is not None:
+                    self.map_editor.update()
 
             # Draw
             self.win.fill((0, 0, 0))
@@ -132,17 +158,21 @@ class Game:
 
                 if self.paused:
                     self._draw_pause_overlay()
+            elif self.state == GameState.MAP_EDITOR:
+                if self.map_editor is not None:
+                    self.map_editor.draw(self.win)
             else:
                 # Keep Game state in sync with MenuManager's internal navigation
                 # (e.g. MAIN_MENU -> MAP_SELECTION -> SETTINGS transitions).
                 # Only sync when we are still in a menu state so that
                 # start_game_from_menu() setting PLAYING is never overwritten here.
-                if self.menu.current_state != GameState.PLAYING:
+                if self.menu.current_state != GameState.PLAYING and self.menu.current_state != GameState.MAP_EDITOR:
                     self.state = self.menu.current_state
                 self.menu.draw()
 
             pygame.display.update()
 
+        self.db.close()
         pygame.quit()
         sys.exit()
 

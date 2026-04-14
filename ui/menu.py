@@ -177,12 +177,16 @@ class MenuManager:
             start_x, 270, button_width, button_height,
             "Select Map", self._on_maps_click, sound_callback=self.play_button_sound
         )
-        self.buttons['btn_settings'] = Button(
+        self.buttons['btn_create_map'] = Button(
             start_x, 340, button_width, button_height,
+            "Create Map", self._on_create_map_click, sound_callback=self.play_button_sound
+        )
+        self.buttons['btn_settings'] = Button(
+            start_x, 410, button_width, button_height,
             "Settings", self._on_settings_click, sound_callback=self.play_button_sound
         )
         self.buttons['btn_quit'] = Button(
-            start_x, 410, button_width, button_height,
+            start_x, 480, button_width, button_height,
             "Quit", self._on_quit_click, sound_callback=self.play_button_sound
         )
 
@@ -389,6 +393,11 @@ class MenuManager:
         self.current_state = GameState.MAP_SELECTION
         self._refresh_map_buttons()
 
+    def _on_create_map_click(self):
+        """כפתור Create Map נלחץ"""
+        self.current_state = GameState.MAP_EDITOR
+        self.game.state = GameState.MAP_EDITOR
+
     def _on_settings_click(self):
         """כפתור Settings נלחץ"""
         self.current_state = GameState.SETTINGS
@@ -439,6 +448,7 @@ class MenuManager:
             for button in self.buttons.values():
                 if button in [self.buttons['btn_play'],
                              self.buttons['btn_maps'],
+                             self.buttons['btn_create_map'],
                              self.buttons['btn_settings'],
                              self.buttons['btn_quit']]:
                     button.handle_event(event)
@@ -475,7 +485,7 @@ class MenuManager:
             self.win.fill((30, 30, 40))
 
         # צייר כפתורים
-        for key in ['btn_play', 'btn_maps', 'btn_settings', 'btn_quit']:
+        for key in ['btn_play', 'btn_maps', 'btn_create_map', 'btn_settings', 'btn_quit']:
             self.buttons[key].draw(self.win)
 
         # צייר תוויות
