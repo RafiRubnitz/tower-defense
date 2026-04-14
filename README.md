@@ -16,11 +16,11 @@ A strategic tower defense game built with **Pygame**. Place towers to stop waves
 - **Difficulty Levels**: Easy, Normal, Hard, Nightmare (coming soon)
 
 ### Content
-- **6 Tower Types**: BasicTower, FreezeTower, LaserTower, and more
+- **6 Tower Types**: BasicTower, FreezeTower, LaserTower, MachineGunTower, SniperTower, SplashTower
   - Each with unique damage profiles, cooldowns, and visual appearance
   - Strategic variety in tower placement
 
-- **6+ Enemy Types**: Soldier, Tank, Scout, Healer, ArmoredSoldier, Boss
+- **4 Enemy Types**: Soldier, Tank, Scout, Boss
   - Each with distinct behavior and stats
   - Progressive difficulty increase
 
@@ -103,26 +103,35 @@ Prevent enemies from reaching the end of the path. If enemies reach the end, you
 **How to Place:**
 1. Click on **grass areas** (green cells) to place a tower
 2. Cannot place on the **path** (brown/dirt areas)
-3. Towers cost **$120** (default)
+3. Towers cost **$120** (Basic) to **$360** (Laser)
 4. Towers automatically target and fire at enemies in range
 
 **Tower Types:**
-- **BasicTower** (Blue Circle) - Balanced damage and cooldown
-  - Range: 3.5 units | Damage: 50 | Cooldown: 600ms | Cost: $120
+- **BasicTower** - Balanced all-rounder
+  - Range: 3.5 | Damage: 50 | Cooldown: 600ms | Cost: $120
 
-- **FreezeTower** (Cyan Square) - Slows enemies
-  - Range: 2.5 units | Damage: 30 | Cooldown: 800ms | Cost: $140
+- **SniperTower** - Long range, high damage, slow fire
+  - Range: 8 | Damage: 200 | Cooldown: 2000ms | Cost: $240
 
-- **LaserTower** (Red Diamond) - Piercing high damage
-  - Range: 4.0 units | Damage: 70 | Cooldown: 500ms | Cost: $150
+- **MachineGunTower** - Fast fire, low damage
+  - Range: 3 | Damage: 15 | Cooldown: 100ms | Cost: $180
+
+- **SplashTower** - Area of effect damage
+  - Range: 4 | Damage: 80 (splash) | Cooldown: 1000ms | Cost: $300
+
+- **FreezeTower** - Slows enemies (no damage)
+  - Range: 3 | Slow: 60% for 1.5s | Cooldown: 2000ms | Cost: $210
+
+- **LaserTower** - Continuous beam, hits multiple enemies
+  - Range: 6 | Damage: 30/tick | Cooldown: 200ms | Cost: $360
 
 ### Economy System
 
 | Resource | Value |
 |----------|-------|
-| **Starting Money** | $350 |
-| **Tower Cost** | $120 (basic) - $150 (advanced) |
-| **Enemy Bounty** | $13-15 per kill |
+| **Starting Money** | $450 |
+| **Tower Cost** | $100 (basic) |
+| **Enemy Bounty** | $14-90 per kill |
 | **Starting Lives** | 10 |
 
 **Strategy Tips:**
@@ -135,12 +144,10 @@ Prevent enemies from reaching the end of the path. If enemies reach the end, you
 
 | Enemy | Health | Speed | Bounty | Notes |
 |-------|--------|-------|--------|-------|
-| **Soldier** | 150 | 2.5 | $13 | Balanced |
-| **Tank** | 250+ | 1.5 | $20 | High health, slow |
-| **Scout** | 80 | 3.5 | $10 | Fast but weak |
-| **Healer** | 100 | 2.0 | $25 | Supports others |
-| **ArmoredSoldier** | 200 | 2.0 | $18 | Resists damage |
-| **Boss** | 500+ | 2.0 | $50 | Wave finisher |
+| **Soldier** | 150 | 2.5 | $14 | Balanced |
+| **Tank** | 450 | 1.25 | $27 | High health, slow |
+| **Scout** | 75 | 5.0 | $18 | Very fast but fragile |
+| **Boss** | 1500 | 1.0 | $90 | Wave finisher |
 
 ### Game Modes
 
@@ -184,13 +191,14 @@ tower-defense/
 ├── towers/                 # Tower implementations (modular)
 │   ├── basic.py           # BasicTower
 │   ├── freeze.py          # FreezeTower
-│   └── laser.py           # LaserTower
+│   ├── laser.py           # LaserTower
+│   ├── machine_gun.py     # MachineGunTower
+│   ├── sniper.py          # SniperTower
+│   └── splash.py          # SplashTower
 │
 ├── enemies/               # Enemy implementations (modular)
 │   ├── soldier.py         # Soldier
-│   ├── tank.py            # Tank
-│   ├── scout.py           # Scout
-│   └── ... (more enemy types)
+│   └── tank.py            # Tank
 │
 ├── research/              # Project analysis and planning
 │   ├── README.md          # Research document index
@@ -280,8 +288,8 @@ The game uses **SQLite** (`tower_defense.db`) to persist:
 | Metric | Value |
 |--------|-------|
 | **Code Size** | ~4,000 lines (core game) |
-| **Tower Types** | 3 implemented, 6+ planned |
-| **Enemy Types** | 6 implemented |
+| **Tower Types** | 6 implemented |
+| **Enemy Types** | 4 implemented |
 | **Maps** | 4 built-in |
 | **FPS** | 60 (sustained) |
 | **Max Entities** | 1000+ (bullets, enemies, towers) |
