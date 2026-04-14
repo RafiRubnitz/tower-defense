@@ -1,5 +1,4 @@
 """Interactive map editor for creating custom maps."""
-import json
 from typing import List, Optional, Tuple
 
 import pygame
