@@ -102,10 +102,16 @@ class Soldier(Enemy):
 
         self._draw_health_bar(win)
 
-        # Simple retro style - filled square with black outline
-        enemy_rect = pygame.Rect(x + 1, y + 1, w - 2, h - 2)
-        pygame.draw.rect(win, (255, 100, 100), enemy_rect)
-        pygame.draw.rect(win, (0, 0, 0), enemy_rect, 1)
+        # Retro style soldier - body with helmet
+        body_rect = pygame.Rect(x + 1, y + 6, w - 2, h - 8)
+        pygame.draw.rect(win, (220, 20, 60), body_rect)  # Uniform color
+
+        # Helmet on top
+        helmet_rect = pygame.Rect(x + 2, y + 1, w - 4, 5)
+        pygame.draw.rect(win, (80, 80, 80), helmet_rect)
+
+        # Black outline
+        pygame.draw.rect(win, (0, 0, 0), pygame.Rect(x, y, w, h), 1)
 
 
 class Tank(Enemy):
@@ -157,10 +163,14 @@ class Tank(Enemy):
 
         self._draw_health_bar(win)
 
-        # Simple retro style - filled square with black outline
-        enemy_rect = pygame.Rect(x + 1, y + 1, w - 2, h - 2)
-        pygame.draw.rect(win, (100, 150, 100), enemy_rect)
-        pygame.draw.rect(win, (0, 0, 0), enemy_rect, 1)
+        # Heavy tank - thick armor
+        armor_rect = pygame.Rect(x + 1, y + 1, w - 2, h - 2)
+        pygame.draw.rect(win, (80, 120, 80), armor_rect)  # Dark green armor
+        # Turret
+        turret_rect = pygame.Rect(x + 5, y + 4, 12, 12)
+        pygame.draw.rect(win, (100, 150, 100), turret_rect)
+        # Black outline
+        pygame.draw.rect(win, (0, 0, 0), pygame.Rect(x, y, w, h), 2)
 
 
 class Scout(Enemy):
@@ -212,10 +222,14 @@ class Scout(Enemy):
 
         self._draw_health_bar(win)
 
-        # Simple retro style - filled square with black outline
-        enemy_rect = pygame.Rect(x + 1, y + 1, w - 2, h - 2)
-        pygame.draw.rect(win, (255, 165, 0), enemy_rect)
-        pygame.draw.rect(win, (0, 0, 0), enemy_rect, 1)
+        # Fast scout - small and nimble
+        body_rect = pygame.Rect(x + 1, y + 2, w - 2, h - 4)
+        pygame.draw.rect(win, (255, 165, 0), body_rect)  # Orange
+        # Head marker
+        head_rect = pygame.Rect(x + 3, y + 1, w - 6, 2)
+        pygame.draw.rect(win, (255, 200, 0), head_rect)
+        # Black outline
+        pygame.draw.rect(win, (0, 0, 0), pygame.Rect(x, y, w, h), 1)
 
 
 class Boss(Enemy):
