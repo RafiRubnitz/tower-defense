@@ -412,7 +412,7 @@ class Round:
     def __init__(self, round_state_id: Optional[int] = None, round_config_id: Optional[int] = None,
                  map_instance: Optional[Map] = None, starting_lives: int = 10,
                  starting_money: int = 450, return_to_menu=None,
-                 difficulty: str = 'normal', total_waves: int = 10):
+                 difficulty: str = 'normal', total_waves: int = 10, game_mode: str = 'classic'):
         self.map = map_instance if map_instance is not None else Map()
         self.towers = []
         self.heart = starting_lives
@@ -423,6 +423,7 @@ class Round:
         self.game_over = False
         self.victory = False
         self.total_waves = total_waves
+        self.game_mode = game_mode  # 'classic' or 'endless'
         self.ui_panel_width = 180
         self.restart_button_rect = None
         self.menu_button_rect = None
@@ -431,6 +432,7 @@ class Round:
         self.start_time = pygame.time.get_ticks() / 1000
         self.time_elapsed = 0
         self.return_to_menu = return_to_menu  # callable: () -> None
+        self.survival_time = 0  # For endless mode - time survived in seconds
 
         # Tower type selection (index into TOWER_TYPES list)
         self.selected_tower_idx = 0  # default: BasicTower
@@ -449,7 +451,13 @@ class Round:
         self._prev_wave_escaped = 0
 
         # Create waves using dynamic difficulty
-        for i in range(self.total_waves):
+        if self.game_mode == 'endless':
+            # Start with first wave only, will generate more dynamically
+            num_initial_waves = 1
+        else:
+            num_initial_waves = self.total_waves
+
+        for i in range(num_initial_waves):
             wave_number = i + 1
             wave_cfg = self.difficulty_manager.get_wave_config(wave_number)
             wave = Wave(self.map, self.towers, self, wave_number=wave_number)
@@ -598,9 +606,33 @@ class Round:
         if self.current_wave < len(self.waves):
             pass  # Wave already initialized
 
+    def _generate_next_wave_endless(self):
+        """Generate and add a new wave for endless mode."""
+        wave_number = len(self.waves) + 1
+        wave_cfg = self.difficulty_manager.get_wave_config(wave_number)
+        wave = Wave(self.map, self.towers, self, wave_number=wave_number)
+        wave.total_enemies = wave_cfg.total_enemies
+        wave.spawn_interval = wave_cfg.spawn_interval
+        wave.hp_multiplier = wave_cfg.enemy_hp_multiplier
+        wave.speed_multiplier = wave_cfg.enemy_speed_multiplier
+        wave.bounty_multiplier = wave_cfg.bounty_multiplier
+        wave.enemy_composition = wave_cfg.enemy_composition
+        self.waves.append(wave)
+
     def update(self, dt: int, *args, **kwargs):
         if self.game_over or self.victory:
             return
+
+        # Update survival time for endless mode
+        if self.game_mode == 'endless':
+            self.survival_time = int((pygame.time.get_ticks() / 1000) - self.start_time)
+
+        # Ensure current wave exists (for endless mode)
+        if self.current_wave >= len(self.waves):
+            if self.game_mode == 'endless':
+                self._generate_next_wave_endless()
+            else:
+                return
 
         self.waves[self.current_wave].update(dt, *args, **kwargs)
 
@@ -623,9 +655,13 @@ class Round:
             self._prev_wave_lives = self.heart
 
             self.current_wave += 1
-            if self.current_wave >= self.total_waves:
-                self.victory = True
-                self.current_wave = self.total_waves - 1  # Keep index in bounds
+
+            # Handle victory/wave progression
+            if self.game_mode == 'classic':
+                if self.current_wave >= self.total_waves:
+                    self.victory = True
+                    self.current_wave = self.total_waves - 1  # Keep index in bounds
+            # In endless mode, just continue to next wave (which will be generated on next update)
 
         # Check game over
         if self.heart <= 0:
@@ -711,8 +747,20 @@ class Round:
 
         # Draw wave
         wave_y = lives_y + stat_spacing
-        wave_text = font.render(f"Wave: {self.current_wave + 1}/{self.total_waves}", True, (100, 150, 255))
+        if self.game_mode == 'endless':
+            wave_text = font.render(f"Wave: {self.current_wave + 1}/∞", True, (100, 150, 255))
+        else:
+            wave_text = font.render(f"Wave: {self.current_wave + 1}/{self.total_waves}", True, (100, 150, 255))
         win.blit(wave_text, (panel_x + 15, wave_y + 2))
+
+        # Draw survival time for endless mode
+        if self.game_mode == 'endless':
+            time_y = score_y + stat_spacing
+            minutes = self.survival_time // 60
+            seconds = self.survival_time % 60
+            time_text = font.render(f"Time: {minutes}:{seconds:02d}", True, (100, 255, 200))
+            win.blit(time_text, (panel_x + 15, time_y + 2))
+            score_y = time_y  # Adjust separator line position
 
         # Draw score
         score_y = wave_y + stat_spacing

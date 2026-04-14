@@ -285,6 +285,12 @@ class MenuManager:
             font_size=28, sound_callback=self.play_button_sound
         )
 
+        self.buttons['btn_game_mode'] = Button(
+            start_x, 390, button_width, button_height,
+            "Mode: Classic", self._on_game_mode_click,
+            font_size=28, sound_callback=self.play_button_sound
+        )
+
         # תוויות
         self.labels['settings_title'] = Label(
             self.screen_width // 2, 60,
@@ -296,7 +302,8 @@ class MenuManager:
         self.settings = {
             'difficulty': 'normal',  # easy, normal, hard
             'lives': 10,
-            'starting_money': 350  # Reduced from 450 for increased difficulty
+            'starting_money': 350,  # Reduced from 450 for increased difficulty
+            'game_mode': 'classic'   # classic or endless
         }
 
         # טעינת הגדרות שמורות
@@ -309,7 +316,8 @@ class MenuManager:
 
         self.settings['difficulty'] = db.get_setting('difficulty', 'normal')
         self.settings['lives'] = int(db.get_setting('lives', '10'))
-        self.settings['starting_money'] = int(db.get_setting('starting_money', '450'))
+        self.settings['starting_money'] = int(db.get_setting('starting_money', '350'))
+        self.settings['game_mode'] = db.get_setting('game_mode', 'classic')
 
         db.close()
         self._update_settings_ui()
@@ -322,6 +330,7 @@ class MenuManager:
         db.save_setting('difficulty', self.settings['difficulty'])
         db.save_setting('lives', str(self.settings['lives']))
         db.save_setting('starting_money', str(self.settings['starting_money']))
+        db.save_setting('game_mode', self.settings['game_mode'])
 
         db.close()
 
@@ -332,6 +341,9 @@ class MenuManager:
 
         self.buttons['btn_lives'].text = f"Lives: {self.settings['lives']}"
         self.buttons['btn_money'].text = f"Starting Money: ${self.settings['starting_money']}"
+
+        mode_display = self.settings['game_mode'].capitalize()
+        self.buttons['btn_game_mode'].text = f"Mode: {mode_display}"
 
     def _on_difficulty_click(self):
         """שינוי רמת קושי"""
@@ -354,6 +366,14 @@ class MenuManager:
         options = [200, 300, 350, 500, 700]  # Updated range for increased difficulty
         current_idx = options.index(self.settings['starting_money']) if self.settings['starting_money'] in options else 2
         self.settings['starting_money'] = options[(current_idx + 1) % len(options)]
+        self._update_settings_ui()
+        self._save_settings()
+
+    def _on_game_mode_click(self):
+        """שינוי מצב משחק"""
+        modes = ['classic', 'endless']
+        current_idx = modes.index(self.settings['game_mode']) if self.settings['game_mode'] in modes else 0
+        self.settings['game_mode'] = modes[(current_idx + 1) % len(modes)]
         self._update_settings_ui()
         self._save_settings()
 
@@ -435,6 +455,7 @@ class MenuManager:
             self.buttons['btn_difficulty'].handle_event(event)
             self.buttons['btn_lives'].handle_event(event)
             self.buttons['btn_money'].handle_event(event)
+            self.buttons['btn_game_mode'].handle_event(event)
 
     def draw(self):
         """צייר את המסך הנוכחי"""
@@ -597,6 +618,7 @@ class MenuManager:
         self.buttons['btn_difficulty'].draw(self.win)
         self.buttons['btn_lives'].draw(self.win)
         self.buttons['btn_money'].draw(self.win)
+        self.buttons['btn_game_mode'].draw(self.win)
 
         # תווית
         self.labels['settings_title'].draw(self.win)

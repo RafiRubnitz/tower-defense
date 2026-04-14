@@ -56,6 +56,7 @@ class Game:
         lives = settings.get('lives', 10)
         money = settings.get('starting_money', 450)
         difficulty = settings.get('difficulty', 'normal')
+        game_mode = settings.get('game_mode', 'classic')  # 'classic' or 'endless'
 
         self.current_round = Round(
             map_instance=game_map,
@@ -64,6 +65,7 @@ class Game:
             return_to_menu=self._return_to_menu,
             difficulty=difficulty,
             total_waves=10,
+            game_mode=game_mode,
         )
         self.state = GameState.PLAYING
         self.paused = False
