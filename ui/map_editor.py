@@ -249,18 +249,23 @@ class MapEditorScreen:
         if not self.path:
             return
 
+        # Ensure path contains tuples (convert from lists if needed)
+        path = [tuple(p) if isinstance(p, list) else p for p in self.path]
+
         # Draw all path cells
-        for col, row in self.path:
+        for col, row in path:
             rect = pygame.Rect(col * self.CELL_SIZE, row * self.CELL_SIZE, self.CELL_SIZE, self.CELL_SIZE)
             pygame.draw.rect(win, self.COLOR_PATH, rect)
 
         # Draw path line connecting cells
-        if len(self.path) > 1:
-            points = [
-                (col * self.CELL_SIZE + self.CELL_SIZE // 2, row * self.CELL_SIZE + self.CELL_SIZE // 2)
-                for col, row in self.path
-            ]
-            pygame.draw.lines(win, (200, 200, 0), points, 3)
+        if len(path) > 1:
+            points = []
+            for col, row in path:
+                x = int(col * self.CELL_SIZE + self.CELL_SIZE // 2)
+                y = int(row * self.CELL_SIZE + self.CELL_SIZE // 2)
+                points.append((x, y))
+            if points:
+                pygame.draw.lines(win, (200, 200, 0), points, 3)
 
         # Draw start marker (green)
         if self.path:
